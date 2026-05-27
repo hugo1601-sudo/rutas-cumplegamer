@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hojas de Ruta — CumpleGamer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:#185FA5; --blue-l:#E6F1FB; --blue-m:#B5D4F4;
+  --teal:#0F6E56; --teal-l:#E1F5EE; --teal-m:#9FE1CB;
+  --amber:#854F0B; --amber-l:#FAEEDA; --amber-m:#EF9F27;
+  --red:#A32D2D; --red-l:#FCEBEB;
+  --green-l:#EAF3DE; --green-m:#C0DD97; --green-d:#27500A;
+  --g50:#F1EFE8; --g100:#D3D1C7; --g700:#444441;
+  --bg:#F4F2ED; --surface:#fff; --border:rgba(0,0,0,0.09);
+  --text:#1a1a18; --muted:#5F5E5A; --r:10px; --rl:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;gap:12px;position:sticky;top:0;z-index:100;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.logo-box{width:30px;height:30px;border-radius:7px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:-.3px;}
+.logo-sub{font-size:11px;color:var(--muted);}
+.admin-badge{font-size:11px;background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-m);border-radius:999px;padding:3px 10px;font-weight:500;}
+.admin-lock-btn{font-size:12px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:var(--r);padding:4px 12px;cursor:pointer;font-family:'DM Sans',sans-serif;display:none;}
+.admin-lock-btn:hover{background:var(--g50);}
+.admin-lock-btn.visible{display:block;}
+
+/* ── ADMIN PANEL ── */
+.admin-panel{background:var(--surface);border:1px solid var(--amber-m);border-radius:var(--rl);padding:1.25rem 1.5rem;margin-bottom:1.25rem;display:none;}
+.admin-panel.on{display:block;}
+.admin-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.admin-panel-header h2{font-size:15px;font-weight:600;}
+.admin-hint{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;}
+.admin-hint code{background:var(--g100);border-radius:3px;padding:1px 5px;font-family:'DM Mono',monospace;font-size:11px;color:var(--g700);}
+.input-row{display:flex;gap:8px;}
+.input-row input{flex:1;height:40px;border:1px solid var(--border);border-radius:var(--r);padding:0 12px;font-family:'DM Mono',monospace;font-size:11px;background:var(--bg);color:var(--text);outline:none;}
+.input-row input:focus{border-color:var(--blue);}
+.btn{height:40px;padding:0 18px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn:hover{background:var(--g50);}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-primary:hover{background:#0C447C;}
+.btn-sm{height:34px;padding:0 14px;font-size:13px;}
+
+.sheet-hint{margin-top:10px;padding:10px 14px;background:var(--g50);border-radius:var(--r);font-size:12px;color:var(--muted);line-height:1.7;}
+.sheet-hint code{background:var(--g100);border-radius:3px;padding:1px 5px;font-family:'DM Mono',monospace;font-size:11px;color:var(--g700);}
+
+/* ── PIN MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.modal-overlay.on{display:flex;}
+.modal{background:var(--surface);border-radius:var(--rl);padding:2rem;width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.12);}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:6px;}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5;}
+.pin-row{display:flex;gap:8px;margin-bottom:10px;}
+.pin-input{flex:1;height:44px;border:1px solid var(--border);border-radius:var(--r);padding:0 14px;font-size:18px;font-weight:600;letter-spacing:6px;text-align:center;font-family:'DM Mono',monospace;outline:none;background:var(--bg);}
+.pin-input:focus{border-color:var(--blue);}
+.pin-input.error{border-color:#F09595;background:var(--red-l);}
+.pin-error{font-size:12px;color:var(--red);margin-bottom:10px;display:none;}
+.pin-error.on{display:block;}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;}
+.btn-cancel{height:36px;padding:0 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);}
+.btn-cancel:hover{background:var(--g50);}
+.btn-confirm{height:36px;padding:0 14px;border-radius:var(--r);border:none;background:var(--blue);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;}
+.btn-confirm:hover{background:#0C447C;}
+
+/* ── NOTICES ── */
+.bar{padding:10px 16px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;display:none;}
+.bar.on{display:flex;align-items:center;gap:8px;}
+.bar.block.on{display:block;}
+.loading-bar{background:var(--blue-l);border:1px solid var(--blue-m);color:var(--blue);}
+.error-bar{background:var(--red-l);border:1px solid #F09595;color:var(--red);white-space:pre-line;}
+.spinner{width:15px;height:15px;border:2px solid var(--blue-m);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MAIN ── */
+.main{max-width:900px;margin:0 auto;padding:1.75rem 1.25rem;}
+
+/* ── DATE PILLS ── */
+.date-sec{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.5rem;margin-bottom:1.25rem;display:none;}
+.date-sec.on{display:block;}
+.date-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;}
+.date-pills{display:flex;flex-wrap:wrap;gap:8px;}
+.pill{padding:6px 16px;border-radius:999px;border:1px solid var(--border);background:var(--bg);font-size:13px;font-weight:500;cursor:pointer;color:var(--text);}
+.pill:hover{border-color:var(--blue);color:var(--blue);}
+.pill.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* ── TEAM TABS ── */
+.ttabs{display:flex;gap:8px;margin-bottom:1rem;}
+.ttab{padding:8px 20px;border-radius:var(--r);border:1px solid var(--border);font-size:14px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--muted);}
+.ttab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* ── SUMMARY ── */
+.sbar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;}
+.met{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;}
+.met-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.met-v{font-size:20px;font-weight:600;line-height:1;}
+.met-v.bl{color:var(--blue);}
+.met-s{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* ── PDF BAR ── */
+.pdf-bar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:.9rem;}
+
+/* ── TIMELINE ── */
+.tl{position:relative;padding-left:34px;}
+.tl::before{content:'';position:absolute;left:11px;top:4px;bottom:4px;width:1.5px;background:var(--g100);}
+.stop{position:relative;margin-bottom:1.1rem;}
+.dot{position:absolute;left:-28px;top:5px;width:17px;height:17px;border-radius:50%;background:var(--blue);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2.5px solid var(--bg);}
+.dot.last{background:var(--teal);}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.9rem 1.1rem;}
+.sc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px;}
+.sc-title{font-size:15px;font-weight:600;}
+.sc-title em{font-style:normal;color:var(--muted);font-weight:400;}
+.sc-addr{font-size:12px;color:var(--muted);margin-top:1px;}
+.badges{display:flex;gap:5px;flex-wrap:wrap;}
+.badge{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:500;white-space:nowrap;}
+.b-pro{background:var(--blue-l);color:#0C447C;}
+.b-start{background:var(--g50);color:var(--g700);}
+.b-gamer{background:#EEEDFE;color:#3C3489;}
+.b-torneo{background:var(--green-l);color:var(--green-d);}
+.b-extra{background:#F3EBFF;color:#5B21B6;}
+
+.extras-bar{background:#F3EBFF;border:1px solid #C4B5FD;border-radius:7px;padding:5px 11px;font-size:12px;color:#5B21B6;margin-bottom:8px;}
+
+.bwaze{color:#00B4D8;border-color:#90E0EF;}
+.bwaze:hover{background:#EFF9FC;}
+.crow{display:flex;gap:14px;align-items:center;background:var(--bg);border-radius:7px;padding:5px 10px;margin-bottom:8px;flex-wrap:wrap;}
+.ci{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);}
+.ci a{color:var(--blue);text-decoration:none;font-weight:500;}
+.tbar{background:var(--bg);border-radius:7px;padding:7px 11px;display:flex;align-items:center;gap:9px;margin-bottom:7px;flex-wrap:wrap;}
+.tb{display:flex;align-items:center;gap:4px;}
+.tbl{font-size:11px;color:var(--muted);}
+.tbv{font-size:13px;font-weight:600;}
+.tsep{color:var(--g100);font-size:12px;}
+.igrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:7px;}
+.il{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.iv{font-size:13px;font-weight:500;}
+.abox{border-radius:7px;padding:6px 11px;font-size:12px;margin-bottom:7px;display:flex;align-items:flex-start;gap:6px;}
+.abox.warn{background:var(--amber-l);border:1px solid var(--amber-m);color:var(--amber);}
+.abox.crit{background:var(--red-l);border:1px solid #F09595;color:var(--red);}
+.abox.ok{background:var(--teal-l);border:1px solid var(--teal-m);color:var(--teal);}
+.brow{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px;}
+.bmap{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--blue);border:1px solid var(--blue-m);border-radius:7px;padding:4px 11px;cursor:pointer;background:transparent;font-family:'DM Sans',sans-serif;text-decoration:none;}
+.bmap:hover{background:var(--blue-l);}
+.bcall{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--teal);border:1px solid var(--teal-m);border-radius:7px;padding:4px 11px;text-decoration:none;}
+.bcall:hover{background:var(--teal-l);}
+
+/* ── DESINSTALACIONES ── */
+.desis{margin-top:1.5rem;}
+.desis-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;}
+.dcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.9rem 1.1rem;}
+.drow{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding:5px 0;border-bottom:1px dashed var(--border);}
+.drow:last-child{border-bottom:none;}
+.dt{font-weight:600;color:var(--text);min-width:46px;}
+
+.empty{text-align:center;padding:3rem;color:var(--muted);}
+.empty-icon{font-size:38px;opacity:.25;margin-bottom:10px;}
+.empty p{font-size:14px;}
+
+/* ── HIDDEN ADMIN TRIGGER ── */
+.admin-trigger{position:fixed;bottom:0;left:0;width:48px;height:48px;cursor:pointer;z-index:50;opacity:0;}
+
+@media print{
+  .topbar,.admin-panel,.date-sec,.ttabs,.pdf-bar,.brow,.admin-trigger{display:none!important;}
+  .main{max-width:100%;padding:0;}
+  .panel{display:block!important;}
+  .sc{break-inside:avoid;}
+
+/* ── PLANIFICACIÓN ── */
+.plan-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.plan-overlay.on{display:flex;}
+.plan-box{background:var(--surface);border-radius:var(--rl);padding:1.75rem;width:min(96vw,680px);max-height:90vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.2);}
+.plan-title{font-size:16px;font-weight:700;margin-bottom:4px;}
+.plan-sub{font-size:13px;color:var(--muted);margin-bottom:1.25rem;}
+.plan-step{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.plan-step:last-child{border-bottom:none;}
+.plan-step-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0;}
+.plan-step-text{flex:1;}
+.plan-step-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;}
+.pss-ok{background:var(--teal-l);color:var(--teal);}
+.pss-err{background:var(--red-l);color:var(--red);}
+.pss-run{background:var(--amber-l);color:var(--amber);}
+.pss-wait{background:var(--g50);color:var(--muted);}
+.plan-result{margin-top:1.25rem;}
+.plan-equipo{background:var(--g50);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:12px;}
+.plan-eq-title{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.plan-eq-badge{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--blue-l);color:var(--blue);}
+.plan-ev{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
+.plan-ev-head{font-size:13px;font-weight:600;margin-bottom:4px;}
+.plan-ev-detail{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;}
+.plan-ev-detail span{white-space:nowrap;}
+.plan-alerta{background:var(--red-l);border:1px solid var(--red);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--red);}
+.plan-alerta-title{font-weight:700;margin-bottom:4px;}
+.plan-ok-badge{background:var(--teal-l);color:var(--teal);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;}
+.plan-warn-badge{background:var(--amber-l);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;}
+.plan-salida{font-size:12px;background:var(--blue-l);color:var(--blue);padding:5px 10px;border-radius:6px;margin-bottom:8px;font-weight:600;}
+.spinner-inline{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:4px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.plan-actions{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+
+<!-- PIN MODAL -->
+<div class="modal-overlay" id="pinModal">
+  <div class="modal">
+    <h3>🔐 Modo administrador</h3>
+    <p>Ingresá el PIN para acceder a la configuración de la planilla.</p>
+    <div class="pin-row">
+      <input class="pin-input" id="pinInput" type="password" maxlength="6" placeholder="••••" onkeydown="if(event.key==='Enter')checkPin()"/>
+    </div>
+    <div class="pin-error" id="pinError">PIN incorrecto. Intentá de nuevo.</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closePin()">Cancelar</button>
+      <button class="btn-confirm" onclick="checkPin()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-box">CG</div>
+    <div>
+      <div class="logo-text">CumpleGamer</div>
+      <div class="logo-sub">Hojas de ruta por equipo</div>
+    </div>
+    <span class="admin-badge" id="adminBadge" style="display:none">⚙ Admin</span>
+  </div>
+  <button class="admin-lock-btn" id="lockBtn" onclick="lockAdmin()">🔒 Salir de admin</button>
+</div>
+
+<div class="main">
+
+  <!-- ADMIN PANEL (oculto por defecto) -->
+  <div class="admin-panel" id="adminPanel">
+    <div class="admin-panel-header">
+      <h2>⚙ Configuración — Planilla de datos</h2>
+    </div>
+    <p class="admin-hint">
+      Pegá la URL CSV de tu Google Sheet publicado. Se actualiza automáticamente cada vez que cargás la página.<br>
+      <strong>Cómo obtenerla:</strong> Google Sheets → <code>Archivo</code> → <code>Compartir</code> → <code>Publicar en la web</code> → elegí la hoja → formato <code>CSV</code> → <code>Publicar</code> → copiá la URL.
+    </p>
+    <div class="input-row">
+      <input id="sheetUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=…&output=csv"/>
+      <button class="btn btn-primary" onclick="loadSheet()">↺ Cargar planilla</button>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">🗺 Google Maps API Key</div>
+      <div class="input-row">
+        <input type="password" id="mapsApiKey" placeholder="Pega tu API Key aquí (Distance Matrix + Directions API)..." autocomplete="off">
+        <button class="btn btn-sm btn-primary" onclick="guardarApiKey()">Guardar</button>
+      </div>
+      <div id="mapsApiStatus" style="font-size:11px;color:var(--muted);margin-top:5px"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5">
+        Sin API key se usan estimaciones basadas en distancia en línea recta (30 km/h promedio urbano).
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">⚡ Planificar rutas automáticamente</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+        Calcula tiempos reales, ordena eventos, distribuye equipos y calcula hora de salida desde la base.
+      </div>
+      <button class="btn btn-primary" id="btnPlanificar" onclick="planificarRutas()" style="display:none">
+        🗺 Planificar rutas para esta fecha
+      </button>
+    </div>
+  </div>
+
+  <div class="bar loading-bar" id="loadBar"><div class="spinner"></div>&nbsp;Leyendo planilla...</div>
+  <div class="bar block error-bar" id="errBar"></div>
+
+  <!-- DATE SELECTOR -->
+  <div class="date-sec" id="dateSec">
+    <div class="date-label">Seleccioná la fecha</div>
+    <div class="date-pills" id="datePills"></div>
+  </div>
+
+  <!-- ROUTE CONTENT -->
+  <div id="routeContent"></div>
+
+</div>
+
+<!-- Hidden admin trigger (bottom-left corner, invisible) -->
+<div class="admin-trigger" id="adminTrigger" onclick="triggerAdmin()" title=""></div>
+
+<script>
+/* ─── CONFIG ─── */
+const ADMIN_PIN = '1234';   // ← Cambiá este PIN
+const SHEET_URL_KEY = 'cg_sheet_url';
+const ADMIN_SESSION_KEY = 'cg_admin';
+const DEFAULT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMr0HDGYSLo4UP0hb60pUYixUgIMlUAW54yDZnXktIMBa4VWun7Z40eNvTp51BGfbfMMeZtdW2s24N/pub?gid=1875192788&single=true&output=csv';
+
+const PROXIES = [
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://thingproxy.freeboard.io/fetch/${u}`,
+];
+
+let allRows = [], dateCol = '', selectedDate = '', isAdmin = false;
+let tiempoAdicionalGlobal = 0; // valor fijo de celda X6
+
+/* ─── ADMIN ACCESS ─── */
+function initAdmin() {
+  // Check URL param ?admin=true
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('admin') === 'true') {
+    grantAdmin();
+    return;
+  }
+  // Check session
+  if (sessionStorage.getItem(ADMIN_SESSION_KEY) === '1') {
+    grantAdmin();
+  }
+}
+
+function triggerAdmin() {
+  if (isAdmin) return;
+  openPin();
+}
+
+function openPin() {
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinInput').classList.remove('error');
+  document.getElementById('pinError').classList.remove('on');
+  document.getElementById('pinModal').classList.add('on');
+  setTimeout(() => document.getElementById('pinInput').focus(), 100);
+}
+
+function closePin() {
+  document.getElementById('pinModal').classList.remove('on');
+}
+
+function checkPin() {
+  const val = document.getElementById('pinInput').value.trim();
+  if (val === ADMIN_PIN) {
+    closePin();
+    sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+    grantAdmin();
+  } else {
+    document.getElementById('pinInput').classList.add('error');
+    document.getElementById('pinError').classList.add('on');
+    document.getElementById('pinInput').value = '';
+    setTimeout(() => document.getElementById('pinInput').focus(), 50);
+  }
+}
+
+function grantAdmin() {
+  isAdmin = true;
+  document.getElementById('adminPanel').classList.add('on');
+  document.getElementById('adminBadge').style.display = 'inline-flex';
+  document.getElementById('lockBtn').classList.add('visible');
+  if (allRows.length) buildDates();
+}
+
+function lockAdmin() {
+  isAdmin = false;
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  document.getElementById('adminPanel').classList.remove('on');
+  document.getElementById('adminBadge').style.display = 'none';
+  document.getElementById('lockBtn').classList.remove('visible');
+  const url = new URL(window.location.href);
+  url.searchParams.delete('admin');
+  window.history.replaceState({}, '', url);
+  if (allRows.length) buildDates();
+}
+
+/* ─── LOAD SHEET ─── */
+async function loadSheet() {
+  const raw = document.getElementById('sheetUrl').value.trim();
+  if (!raw) { showErr('Pegá la URL de la planilla primero.'); return; }
+
+  let csvUrl = raw;
+  if (csvUrl.includes('/pubhtml')) csvUrl = csvUrl.replace('/pubhtml', '/pub');
+  if (!csvUrl.includes('output=csv')) csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'output=csv';
+
+  // Save URL for next load
+  localStorage.setItem(SHEET_URL_KEY, csvUrl);
+
+  setLoad(true); hideErr();
+  document.getElementById('dateSec').classList.remove('on');
+  document.getElementById('routeContent').innerHTML = '';
+
+  const attempts = [
+    () => fetchDirect(csvUrl),
+    ...PROXIES.map(p => () => fetchVia(p(csvUrl))),
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const text = await attempt();
+      if (isValidCSV(text)) { setLoad(false); parseCSV(text); return; }
+    } catch(e) { /* try next */ }
+  }
+
+  setLoad(false);
+  showErr('No se pudo leer la planilla. Verificá que esté publicada como CSV con acceso público.\n\nEn Google Sheets: Archivo → Compartir → Publicar en la web → elegí la hoja → formato CSV → Publicar.');
+}
+
+async function fetchDirect(url) {
+  const r = await fetch(url, { cache: 'no-cache' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.text();
+}
+async function fetchVia(proxyUrl) {
+  const r = await fetch(proxyUrl, { cache: 'no-cache' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.text();
+}
+function isValidCSV(t) {
+  if (!t || t.length < 10) return false;
+  const s = t.trim();
+  return !s.startsWith('<!') && !s.startsWith('<html') && s.split('\n').length >= 2;
+}
+
+/* ─── PARSE ─── */
+function parseCSV(raw) {
+  const lines = raw.trim().split(/\r?\n/).filter(l => l.trim());
+  const headers = splitLine(lines[0]);
+
+  // X6: fila 6 de la planilla = índice 5 en lines (índice 0 = encabezado)
+  // Columna X = índice 23 (base 0). Es un valor fijo que se suma a todos los montajes.
+  const row6vals = lines[5] ? splitLine(lines[5]) : [];
+  tiempoAdicionalGlobal = parseInt(row6vals[23]) || 0;
+
+  const rows = lines.slice(1).map(l => {
+    const vals = splitLine(l);
+    const obj = {};
+    headers.forEach((h,i) => { obj[h.trim()] = (vals[i]||'').trim(); });
+    obj._cols = vals.map(v => v.trim()); // acceso por índice para columnas sin encabezado
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+  if (!rows.length) { showErr('La planilla no tiene filas de datos.'); return; }
+  allRows = rows;
+  buildDates();
+}
+
+function splitLine(line) {
+  const res=[]; let cur=''; let q=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){q=!q;}
+    else if(line[i]===','&&!q){res.push(cur);cur='';}
+    else{cur+=line[i];}
+  }
+  res.push(cur); return res;
+}
+
+/* ─── DATES ─── */
+function buildDates() {
+  const keys = Object.keys(allRows[0]);
+  dateCol = keys.find(k => k.trim() === 'Fecha')
+         || keys.find(k => /^fecha$/i.test(k.trim()))
+         || keys.find(k => /fecha|date|día|dia/i.test(k))
+         || keys[0];
+
+  const allDates = [...new Set(allRows.map(r => r[dateCol]).filter(Boolean))]
+    .sort((a,b) => normD(a).localeCompare(normD(b)));
+
+  // Para usuarios normales, ocultar fechas con más de 4 días de antigüedad
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 4);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  const dates = isAdmin
+    ? allDates
+    : allDates.filter(d => normD(d) >= cutoffStr);
+
+  if (!dates.length) { showErr('No hay fechas disponibles.'); return; }
+
+  const pills = document.getElementById('datePills');
+  pills.innerHTML = '';
+  dates.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'pill';
+    el.textContent = labelD(d);
+    el.onclick = () => {
+      document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+      el.classList.add('active'); selectedDate = d; renderRoutes(d);
+    };
+    pills.appendChild(el);
+  });
+  document.getElementById('dateSec').classList.add('on');
+  if (isAdmin) document.getElementById('btnPlanificar').style.display = 'inline-flex';
+
+  const today = new Date().toISOString().split('T')[0];
+  const idx = Math.max(0, dates.findIndex(d => normD(d) >= today));
+  pills.children[idx]?.click();
+}
+
+/* ─── RENDER ─── */
+function renderRoutes(date) {
+  const rows = allRows.filter(r => r[dateCol] === date);
+  if (!rows.length) {
+    document.getElementById('routeContent').innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>No hay eventos para esta fecha.</p></div>`;
+    return;
+  }
+  const keys = Object.keys(rows[0]);
+  const C = detectCols(keys);
+
+  const teamMap = {};
+  rows.forEach(r => { const t=r[C.team]||'Equipo'; if(!teamMap[t])teamMap[t]=[]; teamMap[t].push(r); });
+  const teams = Object.keys(teamMap).sort();
+
+  let html = `<div class="ttabs">`;
+  teams.forEach((t,i) => { html+=`<div class="ttab${i===0?' active':''}" onclick="switchTab(${i},${teams.length})">${t}</div>`; });
+  html += `</div>`;
+
+  teams.forEach((team, ti) => {
+    const trows = teamMap[team].sort((a,b) => t2m(a[C.instStart])-t2m(b[C.instStart]));
+    const first=trows[0], last=trows[trows.length-1];
+    const tFirst=parseInt(first[C.travelNext])||30;
+    const dep=subM(first[C.instStart]||'12:00', tFirst+15);
+    const zonas=[...new Set(trows.map(r=>r[C.comuna]).filter(Boolean))];
+
+    html+=`<div class="panel${ti===0?' active':''}" id="p${ti}">`;
+    html+=`<div class="pdf-bar">
+      <button class="btn btn-sm" onclick="doPrint(${ti},'${esc(team)}')">🖨 Imprimir</button>
+      <button class="btn btn-sm btn-primary" onclick="doPDF(${ti},'${esc(team)}','${esc(date)}')">⬇ Descargar PDF</button>
+    </div>`;
+    html+=`<div class="sbar">
+      <div class="met"><div class="met-l">Instalaciones</div><div class="met-v">${trows.length}</div><div class="met-s">paradas hoy</div></div>
+      <div class="met"><div class="met-l">Salida base</div><div class="met-v bl">${dep}</div><div class="met-s">${first[C.instStart]||''} − ${tFirst} − 15 min</div></div>
+      <div class="met"><div class="met-l">Último evento</div><div class="met-v">${last[C.eventEnd]||'–'}</div><div class="met-s">fin ${esc(team)}</div></div>
+      <div class="met"><div class="met-l">Zona</div><div class="met-v" style="font-size:13px">${zonas[0]||'–'}</div><div class="met-s">${zonas.join(' / ')}</div></div>
+    </div>`;
+
+    html+=`<div class="tl">`;
+    trows.forEach((r,ri) => {
+      const isLast=ri===trows.length-1;
+
+      // ── EXTRAS: solo mostrar, sin modificar tiempos ──
+      const extrasRaw = r[C.extras]||'';
+
+      const margin=calcM(r[C.instEnd], r[C.eventStart]);
+      const ac=margin===null?'':margin<30?'crit':margin<60?'warn':'ok';
+      const am=margin===null?'':margin<30?`⚠ Solo ${margin} min entre instalación y evento.`:margin<60?`⏱ ${margin} min de margen. No demorar.`:`✅ ${margin} min hasta el evento.`;
+
+      const pack=r[C.pack]||'';
+      const bc=/pro/i.test(pack)?'b-pro':/gamer/i.test(pack)?'b-gamer':'b-start';
+      const rawph=(r[C.phone]||'').replace(/\D/g,'');
+      const ph=rawph.startsWith('56')?rawph.slice(2):rawph;
+      const phf=ph?fmtPh(ph):'';
+
+      // URLs de navegación — deep links nativos con fallback web
+      const addrQ = encodeURIComponent((r[C.address]||'') + ' ' + (r[C.comuna]||'') + ' Chile');
+      const mapsFallUrl = (r[C.linkRuta] && r[C.linkRuta].startsWith('http')) ? r[C.linkRuta] : ('https://maps.google.com/maps?q=' + addrQ);
+      const wazeFallUrl = 'https://waze.com/ul?q=' + addrQ + '&navigate=yes';
+
+      const torneo=r[C.torneo]||'';
+      const hasTorneo=torneo&&!/^no$/i.test(torneo.trim())&&torneo.trim()!=='';
+
+      const extrasList = parseExtrasList(extrasRaw);
+
+      html+=`<div class="stop"><div class="dot${isLast?' last':''}">${ri+1}</div><div class="sc">`;
+
+      // Encabezado
+      html+=`<div class="sc-head"><div>
+        <div class="sc-title">${esc(r[C.client]||'Cliente')}${r[C.child]?` — <em>${esc(r[C.child])}</em>`:''}</div>
+        <div class="sc-addr">📍 ${esc(r[C.address]||'')}${r[C.comuna]?', '+esc(r[C.comuna]):''}</div>
+      </div><div class="badges">
+        ${pack?`<span class="badge ${bc}">${esc(pack)}</span>`:''}
+        ${hasTorneo?`<span class="badge b-torneo">Con torneo</span>`:''}
+        ${extrasList.map(e=>`<span class="badge b-extra">${esc(e)}</span>`).join('')}
+      </div></div>`;
+
+      // Contacto
+      if(phf) html+=`<div class="crow">
+        <div class="ci">📞 <a href="tel:+569${ph}">${phf}</a></div>
+        <div class="ci">💬 <a href="https://wa.me/569${ph}" target="_blank">WhatsApp</a></div>
+      </div>`;
+
+      // Extras — detalle de tiempo adicional
+      if(extrasList.length > 0) html+=`<div class="extras-bar">
+        ➕ Extras: ${extrasList.join(', ')}
+      </div>`;
+
+      // travelNext: valor de la fila SIGUIENTE = trayecto para llegar ahí
+      const nextRow = !isLast ? trows[ri+1] : null;
+      const travelToNext = nextRow ? (nextRow[C.travelNext]||'') : '';
+
+      // Barra de tiempos
+      html+=`<div class="tbar">`;
+      if(r[C.instStart]) html+=`<div class="tb"><span class="tbl">Instalación</span><span class="tbv">${r[C.instStart]}${r[C.instEnd]?' → '+r[C.instEnd]:''}</span></div>`;
+      if(r[C.eventStart]) html+=`<span class="tsep">|</span><div class="tb"><span class="tbl">Evento</span><span class="tbv">${r[C.eventStart]}${r[C.eventEnd]?' → '+r[C.eventEnd]:''}</span></div>`;
+      if(!isLast && travelToNext) html+=`<span class="tsep">|</span><div class="tb"><span class="tbl">Trayecto sig.</span><span class="tbv">${travelToNext} min</span></div>`;
+      if(isLast && r[C.travelBase]) html+=`<span class="tsep">|</span><div class="tb"><span class="tbl">Retorno base</span><span class="tbv">${r[C.travelBase]} min</span></div>`;
+      html+=`</div>`;
+
+      // Grid de info
+      html+=`<div class="igrid">`;
+      const montajeBase = parseInt(r[C.montaje]) || 0;
+      const montajeTotal = montajeBase + tiempoAdicionalGlobal;
+      if(montajeTotal) html+=`<div><div class="il">T° montaje</div><div class="iv">${montajeTotal} min${tiempoAdicionalGlobal > 0 ? ' <span style="font-size:11px;color:var(--amber);">(+'+tiempoAdicionalGlobal+' adic.)</span>' : ''}</div></div>`;
+      if(r[C.desis]) html+=`<div><div class="il">Desinstalación</div><div class="iv">${r[C.desis]} min (orden ${ri+1})</div></div>`;
+      if(!isLast && travelToNext) html+=`<div><div class="il">Trayecto al sig.</div><div class="iv">${travelToNext} min</div></div>`;
+      if(isLast && r[C.travelBase]) html+=`<div><div class="il">Retorno base</div><div class="iv">${r[C.travelBase]} min</div></div>`;
+      html+=`</div>`;
+
+      if(am) html+=`<div class="abox ${ac}">${am}</div>`;
+
+      // Botones navegación + llamada — usan openNav() para deep link con fallback
+      html+=`<div class="brow">
+        <button class="bmap" onclick="openNav('maps','${addrQ}','${mapsFallUrl}')">🗺 Google Maps</button>
+        <button class="bmap bwaze" onclick="openNav('waze','${addrQ}','${wazeFallUrl}')">🔵 Waze</button>
+        ${phf?`<a class="bcall" href="tel:+569${ph}">📞 Llamar</a>`:''}
+      </div></div></div>`;
+    });
+    html+=`</div>`;
+
+    html+=`<div class="desis"><div class="desis-title">Plan de desinstalaciones — ${esc(team)}</div><div class="dcard">`;
+    trows.forEach(r => {
+      const end=r[C.eventEnd]||'–';
+      const d=parseInt(r[C.desis])||30;
+      const ready=t2m(end)!==null?m2t(t2m(end)+d):'–';
+      html+=`<div class="drow"><span class="dt">${end}</span>→ Desinstalar ${esc(r[C.client]||'')}${r[C.comuna]?' ('+esc(r[C.comuna])+')':''} — ${d} min → listo ~${ready}</div>`;
+    });
+    html+=`</div></div></div>`;
+  });
+
+  document.getElementById('routeContent').innerHTML = html;
+}
+
+function switchTab(idx, total) {
+  for(let i=0;i<total;i++) document.getElementById(`p${i}`)?.classList.toggle('active',i===idx);
+  document.querySelectorAll('.ttab').forEach((t,i) => t.classList.toggle('active',i===idx));
+}
+
+/* ─── COLUMN DETECTION ─── */
+function detectCols(keys) {
+  // Try exact match first, then fuzzy
+  const exact = (name) => keys.find(k => k.trim().toLowerCase() === name.toLowerCase()) || '';
+  const fuzzy = (...terms) => keys.find(k => terms.some(t => new RegExp(t,'i').test(k.trim()))) || '';
+  const col = (exactName, ...fallback) => exact(exactName) || fuzzy(...fallback);
+
+  return {
+    team:       col('Equipo',                     'equipo','team'),
+    client:     col('Nombre y Apellido Cliente',  'cliente','client','nombre'),
+    child:      col('Nombre Festejado',            'festejado','cumpleañero','niño','birthday'),
+    pack:       col('Plan Contratado',             'pack','paquete','plan','servicio'),
+    address:    col('Dirección',                   'dirección','direccion','address','calle','domicilio'),
+    comuna:     col('Comuna',                      'comuna','ciudad','localidad'),
+    phone:      col('Telefono Cliente',            'teléfono','telefono','phone','celular','fono','cel','contacto'),
+    instStart:  col('Hora de instalación',         'hora de instalaci','hora inst','instalaci.*inicio','inicio inst'),
+    instEnd:    col('Hora termino Instalación',    'hora termino instal','fin inst','inst.*fin','termino instal'),
+    eventStart: col('Hora Inicio',                 'hora inicio','inicio evento','evento.*inicio','event start'),
+    eventEnd:   col('Hora Termino',                'hora termino','fin evento','evento.*fin','event end'),
+    travelNext: col('Tiempo de trayecto (min)',    'trayecto','tiempo de trayecto','travel','tiempo.*trayecto'),
+    travelBase: col('Tiempo hasta la base',        'hasta la base','retorno','vuelta','tiempo.*base','base'),
+    montaje:    col('T° de Montaje (min)',          'montaje','setup','t.*montaje'),
+    desis:      col('Tiempo de Desinstalación (min)', 'desinstal','desmontaje','teardown'),
+    torneo:     col('¿Lleva Torneo?',              'torneo','tournament','lleva torneo'),
+    linkRuta:   col('Link ruta',                   'link ruta','link','ruta url'),
+    extras:     col('Extras',                      'extras','extra','adicional'),
+    tiempoAdicional: col('Total tiempo Adicional', 'total tiempo adicional', 'tiempo adicional'),
+  };
+}
+
+/* ─── PDF / PRINT ─── */
+function doPDF(ti, team, date) {
+  const panel = document.getElementById(`p${ti}`);
+  if (!panel) return;
+  const clone = panel.cloneNode(true);
+  clone.querySelectorAll('.pdf-bar,.brow').forEach(e => e.remove());
+  const w = window.open('', '_blank');
+  w.document.write(printDoc(clone.innerHTML, team, date));
+  w.document.close();
+  setTimeout(() => { w.focus(); w.print(); }, 900);
+}
+function doPrint(ti, team) { doPDF(ti, team, selectedDate); }
+
+function printDoc(body, team, date) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>Ruta ${team}</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'DM Sans',sans-serif;padding:18px 22px;background:#fff;color:#1a1a18;max-width:760px;margin:0 auto;font-size:13px;}
+    h1{font-size:16px;font-weight:700;margin-bottom:3px;}.sub{font-size:11px;color:#888;padding-bottom:10px;border-bottom:1px solid #eee;margin-bottom:14px;}
+    .sbar{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px;}
+    .met{background:#f4f2ed;border-radius:7px;padding:8px 10px;}
+    .met-l{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px;}
+    .met-v{font-size:17px;font-weight:700;}.met-v.bl{color:#185FA5;}.met-s{font-size:9px;color:#aaa;}
+    .tl{position:relative;padding-left:28px;margin-bottom:12px;}
+    .tl::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:1.5px;background:#e0ddd5;}
+    .stop{position:relative;margin-bottom:10px;page-break-inside:avoid;}
+    .dot{position:absolute;left:-23px;top:4px;width:15px;height:15px;border-radius:50%;background:#185FA5;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+    .dot.last{background:#0F6E56;}
+    .sc{border:1px solid #e0ddd5;border-radius:10px;padding:9px 12px;}
+    .sc-head{display:flex;justify-content:space-between;gap:5px;margin-bottom:4px;}
+    .sc-title{font-size:13px;font-weight:700;}.sc-title em{font-style:normal;color:#888;font-weight:400;}
+    .sc-addr{font-size:10px;color:#888;margin-bottom:5px;}
+    .badge{font-size:9px;padding:2px 7px;border-radius:999px;font-weight:600;margin-right:3px;}
+    .b-pro{background:#E6F1FB;color:#0C447C;}.b-start{background:#f1efe8;color:#444;}.b-gamer{background:#EEEDFE;color:#3C3489;}.b-torneo{background:#EAF3DE;color:#27500A;}
+    .crow{background:#f4f2ed;border-radius:5px;padding:4px 9px;margin-bottom:5px;font-size:11px;color:#555;}
+    .crow a{color:#185FA5;text-decoration:none;font-weight:600;}
+    .tbar{background:#f4f2ed;border-radius:5px;padding:5px 9px;margin-bottom:5px;display:flex;gap:8px;flex-wrap:wrap;}
+    .tbl{font-size:9px;color:#888;}.tbv{font-size:11px;font-weight:700;}.tsep{color:#ccc;font-size:10px;}
+    .igrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:4px;}
+    .il{font-size:9px;color:#aaa;text-transform:uppercase;}.iv{font-size:11px;font-weight:600;}
+    .abox{border-radius:5px;padding:4px 9px;font-size:10px;margin-bottom:4px;}
+    .warn{background:#FAEEDA;color:#854F0B;}.crit{background:#FCEBEB;color:#A32D2D;}.ok{background:#E1F5EE;color:#0F6E56;}
+    .extras-bar{background:#F3EBFF;border:1px solid #C4B5FD;border-radius:5px;padding:4px 9px;font-size:10px;color:#5B21B6;margin-bottom:4px;}
+    .b-extra{background:#F3EBFF;color:#5B21B6;}
+    .desis{margin-top:12px;page-break-inside:avoid;}
+    .desis-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:6px;}
+    .dcard{border:1px solid #e0ddd5;border-radius:9px;padding:8px 12px;}
+    .drow{display:flex;gap:6px;font-size:11px;color:#666;padding:4px 0;border-bottom:1px dashed #eee;}
+    .drow:last-child{border-bottom:none;}.dt{font-weight:700;color:#1a1a18;min-width:42px;}
+    .pdf-bar,.brow,.ttabs{display:none!important;}
+    @media print{.stop{page-break-inside:avoid;}}
+  </style></head><body>
+  <h1>Hoja de ruta — ${team}</h1>
+  <div class="sub">CumpleGamer · ${labelD(date)} · Generado el ${new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}</div>
+  ${body}
+  </body></html>`;
+}
+
+/* ─── NAVEGACIÓN MÓVIL ─── */
+function openNav(app, addrQ, fallbackUrl) {
+  // Intenta abrir la app nativa; si falla en 1.5s usa el fallback web
+  let appUrl;
+  if (app === 'maps') {
+    // iOS usa comgooglemap://, Android responde igual o usa geo:
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    appUrl = isIOS
+      ? 'comgooglemap://?q=' + addrQ
+      : 'geo:0,0?q=' + addrQ;
+  } else {
+    appUrl = 'waze://?q=' + addrQ + '&navigate=yes';
+  }
+
+  // Trick: iframe para lanzar el scheme sin salir de la página
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+
+  let opened = false;
+  const timer = setTimeout(() => {
+    if (!opened) window.open(fallbackUrl, '_blank');
+    document.body.removeChild(iframe);
+  }, 1500);
+
+  window.addEventListener('blur', function handler() {
+    opened = true;
+    clearTimeout(timer);
+    document.body.removeChild(iframe);
+    window.removeEventListener('blur', handler);
+  }, { once: true });
+
+  iframe.src = appUrl;
+}
+
+/* ─── EXTRAS ─── */
+const EXTRAS_MAP = [
+  { match: /2\s*racing\s*ps5/i,         mins: 20, label: '2 Racing PS5' },
+  { match: /1\s*racing\s*ps5/i,         mins: 10, label: '1 Racing PS5' },
+  { match: /racing\s*ps5/i,             mins: 10, label: 'Racing PS5' },
+  { match: /vr\s*ps5/i,                 mins: 15, label: 'VR PS5' },
+  { match: /guitar\s*hero/i,            mins: 10, label: 'Guitar Hero Live PS5' },
+  { match: /3\s*m[oó]dulos?\s*extra/i,  mins: 40, label: '3 Módulos Extras' },
+  { match: /2\s*m[oó]dulos?\s*extra/i,  mins: 30, label: '2 Módulos Extras' },
+  { match: /m[oó]dulo\s*extra/i,        mins: 15, label: 'Módulo Extra' },
+];
+
+function calcExtras(raw) {
+  if (!raw || !raw.trim()) return 0;
+  let total = 0;
+  // Split by comma or newline for multiple selections
+  const parts = raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  parts.forEach(part => {
+    for (const e of EXTRAS_MAP) {
+      if (e.match.test(part)) { total += e.mins; break; }
+    }
+  });
+  return total;
+}
+
+function parseExtrasList(raw) {
+  if (!raw || !raw.trim()) return [];
+  const parts = raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  const result = [];
+  parts.forEach(part => {
+    for (const e of EXTRAS_MAP) {
+      if (e.match.test(part)) { result.push(e.label); break; }
+    }
+  });
+  return result;
+}
+
+/* ─── HELPERS ─── */
+function t2m(t){if(!t)return null;const m=t.match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:null;}
+function m2t(m){return`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;}
+function subM(t,n){const m=t2m(t);return m===null?'–':m2t(m-n);}
+function calcM(ie,es){const a=t2m(ie),b=t2m(es);return(a===null||b===null)?null:b-a;}
+function fmtPh(d){const c=d.replace(/\D/g,'');return c.length>=8?`+56 9 ${c.slice(-8,-4)} ${c.slice(-4)}`:d;}
+function normD(d){const m=d.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);if(!m)return d;const y=m[3].length===2?'20'+m[3]:m[3];return`${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;}
+function labelD(d){
+  const mo=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const m=d.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if(!m)return d;
+  const y=m[3].length===2?'20'+m[3]:m[3];
+  return`${parseInt(m[1])} de ${mo[parseInt(m[2])-1]} ${y}`;
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function setLoad(v){document.getElementById('loadBar').classList.toggle('on',v);}
+function showErr(msg){const e=document.getElementById('errBar');e.textContent=msg;e.classList.add('on','block');}
+function hideErr(){document.getElementById('errBar').classList.remove('on');}
+
+
+/* ══════════════════════════════════════════════════════════════
+   MOTOR DE PLANIFICACIÓN DE RUTAS — CumpleGamer
+   Base: Club Hípico 4851, Pedro Aguirre Cerda, Santiago
+   Lógica:
+   - Tiempo montaje = según pack + extras
+   - Equipos: hasta 3 eventos (Gamer/Pro/Ultra) o 4 si el 4° es Start
+   - Hora salida = se calcula hacia atrás desde primer evento
+   - Si no alcanza → redistribuir o alertar
+══════════════════════════════════════════════════════════════ */
+
+const BASE_ADDR    = 'Club Hípico 4851, Pedro Aguirre Cerda, Santiago, Chile';
+const MAX_SPEED_KMH = 30; // velocidad promedio urbana para estimación sin API key
+const MAPS_KEY_STORAGE = 'cg_maps_api_key';
+
+let planificacionActual = null; // resultado pendiente de aplicar
+
+/* ── TIEMPOS DE MONTAJE ── */
+function calcMontaje(pack, extras) {
+  const p = (pack||'').toLowerCase();
+  let base = 15;
+  if (/ultra/.test(p))                    base = 90;
+  else if (/pro/.test(p))                 base = 45;
+  else if (/gamer/.test(p))               base = 45;
+  else if (/start/.test(p))               base = 15;
+
+  // Extras según fórmula
+  const ex = extras || '';
+  let add = 0;
+  if (/2\s*racing/i.test(ex))             add += 20;
+  else if (/1\s*racing|racing/i.test(ex)) add += 10;
+  if (/vr\s*ps5/i.test(ex))              add += 15;
+  if (/guitar\s*hero/i.test(ex))         add += 10;
+  if (/3\s*m[oó]dulos/i.test(ex))        add += 40;
+  else if (/2\s*m[oó]dulos/i.test(ex))   add += 30;
+  else if (/m[oó]dulo/i.test(ex))        add += 15;
+
+  return base + add;
+}
+
+/* ── DESINSTALACIÓN ── */
+function calcDesinstalacion(pack) {
+  const p = (pack||'').toLowerCase();
+  if (/ultra/.test(p)) return 60;
+  if (/pro/.test(p))   return 40;
+  if (/gamer/.test(p)) return 30;
+  return 15; // start
+}
+
+/* ── API KEY ── */
+function guardarApiKey() {
+  const key = document.getElementById('mapsApiKey').value.trim();
+  if (!key) return;
+  localStorage.setItem(MAPS_KEY_STORAGE, key);
+  document.getElementById('mapsApiStatus').textContent = '✓ API key guardada correctamente.';
+  document.getElementById('mapsApiStatus').style.color = 'var(--teal)';
+}
+
+function getMapsKey() {
+  return localStorage.getItem(MAPS_KEY_STORAGE) || '';
+}
+
+/* ── DISTANCIA/TIEMPO ENTRE DOS PUNTOS ──
+   Intenta Google Distance Matrix; si falla usa estimación euclidiana */
+async function getTiempoTrayecto(origen, destino) {
+  const key = getMapsKey();
+  if (key) {
+    try {
+      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origen)}&destinations=${encodeURIComponent(destino)}&mode=driving&language=es&key=${key}`;
+      // Usamos un proxy para evitar CORS
+      const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+      const r = await fetch(proxy, { cache: 'no-store' });
+      const d = await r.json();
+      const data = JSON.parse(d.contents || '{}');
+      const el = data?.rows?.[0]?.elements?.[0];
+      if (el?.status === 'OK') {
+        return Math.ceil(el.duration.value / 60); // segundos → minutos
+      }
+    } catch(e) { /* fallback */ }
+  }
+  // Estimación sin API: distancia en línea recta con factor 1.4 (urbano)
+  return estimarTiempoSinAPI(origen, destino);
+}
+
+function estimarTiempoSinAPI(orig, dest) {
+  // Tabla de tiempos aproximados por sector desde Club Hípico
+  // (estimaciones basadas en geografía de Santiago)
+  const tablaMinutos = {
+    'pedro aguirre cerda': 5, 'san miguel': 8, 'la cisterna': 12,
+    'la granja': 15, 'san ramón': 18, 'lo espejo': 12, 'el bosque': 20,
+    'san bernardo': 30, 'la florida': 25, 'puente alto': 35,
+    'ñuñoa': 18, 'providencia': 20, 'las condes': 30, 'vitacura': 35,
+    'lo barnechea': 45, 'maipú': 25, 'cerrillos': 20, 'estación central': 15,
+    'quinta normal': 18, 'santiago': 15, 'recoleta': 22, 'conchalí': 28,
+    'huechuraba': 35, 'pudahuel': 30, 'quilicura': 35, 'lampa': 50,
+    'colina': 55, 'buin': 40, 'paine': 45, 'peñaflor': 35,
+    'talagante': 40, 'isla de maipo': 50, 'melipilla': 70,
+    'peñalolén': 30, 'la reina': 25, 'macul': 20, 'san joaquín': 12,
+    'lo prado': 22, 'cerro navia': 25, 'renca': 30,
+    'valparaíso': 90, 'viña del mar': 95, 'con con': 100,
+    'cartagena': 85, 'rancagua': 90,
+  };
+  const destLower = dest.toLowerCase();
+  for (const [key, mins] of Object.entries(tablaMinutos)) {
+    if (destLower.includes(key)) return mins;
+  }
+  return 30; // default
+}
+
+/* ── ASIGNAR EVENTOS A EQUIPOS ──
+   Regla: máx 3 eventos (Gamer/Pro/Ultra) o 4 si el 4° es Start */
+function asignarEquipos(eventos) {
+  // Ordenar por hora de inicio
+  const evs = [...eventos].sort((a,b) => t2m(a.horaInicio) - t2m(b.horaInicio));
+  const equipos = [];
+  const usados  = new Set();
+
+  let numEquipo = 1;
+  while (usados.size < evs.length) {
+    const equipo = [];
+    for (const ev of evs) {
+      if (usados.has(ev._idx)) continue;
+      const pack = (ev.pack||'').toLowerCase();
+      const esStart = /start/.test(pack);
+      const maxEv   = equipo.length < 3 ? true
+        : (equipo.length === 3 && esStart && !equipo.some(e => /start/.test((e.pack||'').toLowerCase())));
+      if (!maxEv) continue;
+      equipo.push(ev);
+      usados.add(ev._idx);
+      if (equipo.length >= 4) break;
+    }
+    if (equipo.length) {
+      equipos.push({ nombre: 'Equipo ' + numEquipo, eventos: equipo });
+      numEquipo++;
+    } else break;
+  }
+  return equipos;
+}
+
+/* ── PLANIFICACIÓN PRINCIPAL ── */
+async function planificarRutas() {
+  if (!selectedDate) { alert('Selecciona una fecha primero.'); return; }
+
+  const rows = allRows.filter(r => r[dateCol] === selectedDate);
+  if (!rows.length) { alert('No hay eventos para esta fecha.'); return; }
+
+  // Abrir modal y mostrar pasos
+  document.getElementById('planOverlay').classList.add('on');
+  document.getElementById('planResult').innerHTML = '';
+  document.getElementById('btnAplicar').style.display = 'none';
+  document.getElementById('planSubTitle').textContent = 'Planificando rutas para ' + labelD(selectedDate) + '...';
+
+  const keys = Object.keys(rows[0]);
+  const C    = detectCols(keys);
+
+  // Extraer eventos
+  const eventos = rows.map((r, i) => ({
+    _idx:       i,
+    _row:       r,
+    cliente:    r[C.client]   || '',
+    festejado:  r[C.child]    || '',
+    pack:       r[C.pack]     || '',
+    extras:     r[C.extras]   || '',
+    direccion:  r[C.address]  || '',
+    comuna:     r[C.comuna]   || '',
+    horaInicio: r[C.eventStart] || '',
+    horaFin:    r[C.eventEnd]   || '',
+    montaje:    calcMontaje(r[C.pack], r[C.extras]),
+    desis:      calcDesinstalacion(r[C.pack]),
+  }));
+
+  setStep('paso-eventos', 'run', `Encontrados ${eventos.length} evento${eventos.length!==1?'s':''}`);
+  await sleep(300);
+  setStep('paso-eventos', 'ok',  `${eventos.length} evento${eventos.length!==1?'s':''} cargados`);
+
+  // Asignar a equipos
+  const equipos = asignarEquipos(eventos);
+  setStep('paso-equipos', 'ok', `${equipos.length} equipo${equipos.length!==1?'s':''} formados`);
+  await sleep(200);
+
+  // Calcular trayectos para cada equipo
+  setStep('paso-trayectos', 'run', 'Calculando trayectos...');
+  const usandoAPI = !!getMapsKey();
+
+  for (const eq of equipos) {
+    // Trayecto base → primer evento
+    const primDir = eq.eventos[0].direccion + ', ' + eq.eventos[0].comuna + ', Santiago, Chile';
+    eq.trayectoBase = await getTiempoTrayecto(BASE_ADDR, primDir);
+
+    // Trayectos entre eventos
+    for (let i = 0; i < eq.eventos.length - 1; i++) {
+      const orig = eq.eventos[i].direccion + ', ' + eq.eventos[i].comuna + ', Santiago, Chile';
+      const dest = eq.eventos[i+1].direccion + ', ' + eq.eventos[i+1].comuna + ', Santiago, Chile';
+      eq.eventos[i].trayectoSiguiente = await getTiempoTrayecto(orig, dest);
+    }
+    // Trayecto último evento → base
+    const ultDir = eq.eventos[eq.eventos.length-1].direccion + ', ' + eq.eventos[eq.eventos.length-1].comuna + ', Santiago, Chile';
+    eq.eventos[eq.eventos.length-1].trayectoBase = await getTiempoTrayecto(ultDir, BASE_ADDR);
+  }
+
+  setStep('paso-trayectos', 'ok', 'Trayectos calculados' + (usandoAPI ? ' (Google Maps)' : ' (estimados)'));
+  await sleep(200);
+
+  // Calcular horarios
+  setStep('paso-horarios', 'run', 'Calculando horarios...');
+  const alertas = [];
+
+  for (const eq of equipos) {
+    for (let i = 0; i < eq.eventos.length; i++) {
+      const ev = eq.eventos[i];
+      const inicioMin  = t2m(ev.horaInicio);
+
+      // Hora de instalación = hora evento − tiempo montaje
+      ev.horaInstInicio = m2t(inicioMin - ev.montaje);
+      ev.horaInstFin    = ev.horaInicio; // instalación termina cuando empieza el evento
+      ev.horaDesisInicio= ev.horaFin;
+      ev.horaDesFin     = m2t(t2m(ev.horaFin) + ev.desis);
+
+      // Verificar que hay tiempo suficiente antes del siguiente evento
+      if (i < eq.eventos.length - 1) {
+        const finDesis   = t2m(ev.horaDesFin);
+        const trayecto   = ev.trayectoSiguiente || 30;
+        const llegada    = finDesis + trayecto;
+        const sigInst    = t2m(eq.eventos[i+1].horaInstInicio || eq.eventos[i+1].horaInicio) - eq.eventos[i+1].montaje;
+        const margen     = sigInst - llegada;
+
+        ev.llegadaSig    = m2t(llegada);
+        ev.margenSig     = margen;
+
+        if (margen < 0) {
+          alertas.push({
+            equipo:   eq.nombre,
+            evento1:  ev.cliente + ' (' + ev.horaInicio + ')',
+            evento2:  eq.eventos[i+1].cliente + ' (' + eq.eventos[i+1].horaInicio + ')',
+            deficit:  Math.abs(margen),
+            trayecto: trayecto,
+          });
+        }
+      }
+    }
+
+    // Hora de salida desde base = hora instalación primer evento − trayecto base − 15 min buffer
+    const primerInstMin  = t2m(eq.eventos[0].horaInstInicio);
+    eq.horaSalida        = m2t(primerInstMin - (eq.trayectoBase || 30) - 15);
+    eq.llegadaBase       = m2t(t2m(eq.eventos[eq.eventos.length-1].horaDesFin) +
+                              (eq.eventos[eq.eventos.length-1].trayectoBase || 30));
+  }
+
+  setStep('paso-horarios', alertas.length ? 'err' : 'ok',
+    alertas.length ? alertas.length + ' conflicto(s) detectado(s)' : 'Horarios sin conflictos');
+
+  // Guardar resultado
+  planificacionActual = { equipos, alertas, C, usandoAPI };
+  await sleep(200);
+
+  // Renderizar resultado
+  renderPlanResult(planificacionActual);
+  document.getElementById('btnAplicar').style.display = 'inline-flex';
+}
+
+/* ── RENDER RESULTADO ── */
+function renderPlanResult({ equipos, alertas, usandoAPI }) {
+  let html = '';
+
+  if (!usandoAPI) {
+    html += `<div style="background:var(--amber-l);border:1px solid var(--amber-m);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--amber);margin-bottom:12px">
+      ⚠️ Trayectos estimados sin Google Maps API. Los tiempos son aproximados (30 km/h promedio urbano).
+      Configura tu API key para tiempos reales.
+    </div>`;
+  }
+
+  if (alertas.length) {
+    html += `<div class="plan-alerta"><div class="plan-alerta-title">⚠️ ${alertas.length} conflicto${alertas.length!==1?'s':''} de tiempo detectado${alertas.length!==1?'s':''}</div>`;
+    alertas.forEach(a => {
+      html += `<div style="margin-top:4px">• <strong>${a.equipo}</strong>: entre <em>${a.evento1}</em> y <em>${a.evento2}</em>
+        — faltan <strong>${a.deficit} min</strong> (trayecto ${a.trayecto} min, desinstalación incluida)</div>`;
+    });
+    html += `<div style="margin-top:8px;font-size:11px">💡 Considera redistribuir los eventos entre equipos o ajustar los horarios.</div></div>`;
+  }
+
+  equipos.forEach((eq, ei) => {
+    html += `<div class="plan-equipo">
+      <div class="plan-eq-title">
+        👥 ${eq.nombre}
+        <span class="plan-eq-badge">${eq.eventos.length} evento${eq.eventos.length!==1?'s':''}</span>
+      </div>
+      <div class="plan-salida">
+        🚗 Salida desde base: <strong>${eq.horaSalida}</strong>
+        &nbsp;·&nbsp; Regreso estimado: <strong>${eq.llegadaBase}</strong>
+        &nbsp;·&nbsp; Trayecto a 1° evento: ${eq.trayectoBase} min
+      </div>`;
+
+    eq.eventos.forEach((ev, i) => {
+      const tieneConflicto = alertas.some(a => a.equipo === eq.nombre &&
+        a.evento1.includes(ev.cliente));
+      const badge = tieneConflicto
+        ? `<span class="plan-warn-badge">⚠ Conflicto</span>`
+        : `<span class="plan-ok-badge">✓ OK</span>`;
+
+      html += `<div class="plan-ev">
+        <div class="plan-ev-head">${i+1}. ${esc(ev.cliente)}${ev.festejado?' — '+esc(ev.festejado):''} ${badge}</div>
+        <div class="plan-ev-detail">
+          <span>📍 ${esc(ev.direccion)}, ${esc(ev.comuna)}</span>
+          <span>📦 ${esc(ev.pack)}</span>
+        </div>
+        <div class="plan-ev-detail" style="margin-top:4px">
+          <span>🔧 Instalación: <strong>${ev.horaInstInicio} → ${ev.horaInstFin}</strong> (${ev.montaje} min)</span>
+          <span>🎮 Evento: <strong>${ev.horaInicio} → ${ev.horaFin}</strong></span>
+          <span>📦 Desinstalación: <strong>${ev.horaDesisInicio} → ${ev.horaDesFin}</strong> (${ev.desis} min)</span>
+        </div>`;
+
+      if (i < eq.eventos.length - 1) {
+        const margenColor = (ev.margenSig||0) < 0 ? 'var(--red)' : (ev.margenSig||0) < 30 ? 'var(--amber)' : 'var(--teal)';
+        html += `<div style="margin-top:6px;font-size:11px;color:var(--muted)">
+          ↓ Trayecto al siguiente: <strong>${ev.trayectoSiguiente||'?'} min</strong>
+          · Llegada: <strong>${ev.llegadaSig||'?'}</strong>
+          · Margen: <strong style="color:${margenColor}">${(ev.margenSig||0) >= 0 ? '+' : ''}${ev.margenSig||0} min</strong>
+        </div>`;
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+
+  document.getElementById('planResult').innerHTML = html;
+}
+
+/* ── APLICAR PLANIFICACIÓN A LA PLANILLA ──
+   Escribe los resultados calculados en los campos correspondientes */
+function aplicarPlanificacion() {
+  if (!planificacionActual) return;
+  const { equipos, C } = planificacionActual;
+
+  // Actualizar allRows con los nuevos valores calculados
+  equipos.forEach((eq, ei) => {
+    eq.eventos.forEach(ev => {
+      const r = ev._row;
+      if (C.instStart)  r[C.instStart]  = ev.horaInstInicio   || '';
+      if (C.instEnd)    r[C.instEnd]    = ev.horaInstFin      || '';
+      if (C.desis)      r[C.desis]      = String(ev.desis)    || '';
+      if (C.travelNext) r[C.travelNext] = String(ev.trayectoSiguiente || '');
+      if (C.travelBase) r[C.travelBase] = String(ev._row[C.travelBase] || ev.trayectoBase || '');
+      if (C.montaje)    r[C.montaje]    = String(ev.montaje)  || '';
+      if (C.team)       r[C.team]       = eq.nombre;
+    });
+  });
+
+  cerrarPlan();
+
+  // Re-renderizar con los datos actualizados
+  renderRoutes(selectedDate);
+
+  // Mostrar confirmación
+  setTimeout(() => {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--teal);color:#fff;padding:10px 18px;border-radius:var(--r);font-size:13px;font-weight:600;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.2)';
+    bar.textContent = '✓ Planificación aplicada correctamente';
+    document.body.appendChild(bar);
+    setTimeout(() => bar.remove(), 3500);
+  }, 200);
+}
+
+/* ── HELPERS MODAL ── */
+function cerrarPlan() {
+  document.getElementById('planOverlay').classList.remove('on');
+}
+
+function setStep(id, status, texto) {
+  const container = document.getElementById('planSteps');
+  let el = document.getElementById(id);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = id;
+    el.className = 'plan-step';
+    container.appendChild(el);
+  }
+  const icons = { run: '⏳', ok: '✅', err: '⚠️', wait: '○' };
+  const cls   = { run: 'pss-run', ok: 'pss-ok', err: 'pss-err', wait: 'pss-wait' };
+  el.innerHTML = `
+    <div class="plan-step-icon">${icons[status]||'○'}</div>
+    <div class="plan-step-text">${texto}</div>
+    <div class="plan-step-status ${cls[status]||''}">${status.toUpperCase()}</div>`;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Cargar API key guardada al inicio
+window.addEventListener('load', () => {
+  const savedKey = getMapsKey();
+  if (savedKey) {
+    document.getElementById('mapsApiKey').value = savedKey;
+    document.getElementById('mapsApiStatus').textContent = '✓ API key cargada desde memoria.';
+    document.getElementById('mapsApiStatus').style.color = 'var(--teal)';
+  }
+});
+
+/* ─── INIT ─── */
+window.onload = () => {
+  // Restore saved URL or use default
+  const saved = localStorage.getItem(SHEET_URL_KEY) || DEFAULT_URL;
+  document.getElementById('sheetUrl').value = saved;
+
+  // Init admin mode
+  initAdmin();
+
+  // Auto-load sheet
+  loadSheet();
+};
+</script>
+<!-- MODAL PLANIFICACIÓN -->
+<div class="plan-overlay" id="planOverlay">
+  <div class="plan-box">
+    <div class="plan-title">🗺 Planificación de rutas</div>
+    <div class="plan-sub" id="planSubTitle">Calculando rutas óptimas...</div>
+    <div id="planSteps"></div>
+    <div class="plan-result" id="planResult"></div>
+    <div class="plan-actions">
+      <button class="btn btn-primary" id="btnAplicar" onclick="aplicarPlanificacion()" style="display:none">✅ Aplicar a planilla</button>
+      <button class="btn" onclick="cerrarPlan()">Cerrar</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
