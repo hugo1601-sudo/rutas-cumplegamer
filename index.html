@@ -162,15 +162,52 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .empty-icon{font-size:38px;opacity:.25;margin-bottom:10px;}
 .empty p{font-size:14px;}
 
-/* ── HIDDEN ADMIN TRIGGER ── */
-.admin-trigger{position:fixed;bottom:0;left:0;width:48px;height:48px;cursor:pointer;z-index:50;opacity:0;}
+/* ── CHECKLIST ── */
+.chk-section{margin-top:10px;border-top:1px solid var(--border);padding-top:10px;}
+.chk-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.chk-count{font-size:11px;background:var(--g50);border:1px solid var(--g100);border-radius:999px;padding:2px 10px;font-weight:600;color:var(--muted);transition:all .2s;}
+.chk-count.done{background:var(--teal-l);border-color:var(--teal-m);color:var(--teal);}
+.chk-list{display:flex;flex-direction:column;gap:4px;}
+.chk-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);cursor:pointer;user-select:none;transition:all .15s;}
+.chk-item:hover{border-color:var(--g100);background:var(--g50);}
+.chk-item.checked{background:var(--teal-l);border-color:var(--teal-m);}
+.chk-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);flex-shrink:0;cursor:pointer;}
+.chk-label{flex:1;font-size:13px;font-weight:500;color:var(--text);transition:all .15s;}
+.chk-item.checked .chk-label{text-decoration:line-through;color:var(--muted);}
+.chk-tag{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap;}
+.tag-consola{background:var(--blue-l);color:#0C447C;}
+.tag-extra{background:#EEEDFE;color:#3C3489;}
+.tag-modulo{background:var(--green-l);color:var(--green-d);}
+.tag-hora{background:var(--amber-l);color:var(--amber);}
+.tag-torneo{background:var(--green-l);color:var(--green-d);}
+.tag-otro{background:var(--g50);color:var(--g700);}
+.chk-progress{margin-bottom:8px;}
+.chk-bar-wrap{height:4px;background:var(--g100);border-radius:2px;overflow:hidden;}
+.chk-bar{height:100%;background:var(--teal);border-radius:2px;transition:width .3s;}
 
-@media print{
-  .topbar,.admin-panel,.date-sec,.ttabs,.pdf-bar,.brow,.admin-trigger{display:none!important;}
-  .main{max-width:100%;padding:0;}
-  .panel{display:block!important;}
-  .sc{break-inside:avoid;}
-}
+
+/* ── CHECKLIST ── */
+.checklist{margin-top:10px;border-top:1px dashed var(--border);padding-top:10px;}
+.checklist-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.checklist-title button{font-size:10px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.checklist-title button:hover{background:var(--g50);}
+.cl-group{margin-bottom:6px;}
+.cl-group-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:4px;}
+.cl-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;cursor:pointer;transition:background .1s;user-select:none;}
+.cl-item:hover{background:var(--g50);}
+.cl-item.checked{background:var(--teal-l);}
+.cl-item.checked .cl-label{text-decoration:line-through;color:var(--muted);}
+.cl-box{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--g100);background:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.cl-item.checked .cl-box{background:var(--teal);border-color:var(--teal);}
+.cl-check{color:#fff;font-size:10px;font-weight:700;display:none;}
+.cl-item.checked .cl-check{display:block;}
+.cl-label{font-size:13px;color:var(--text);}
+.cl-qty{font-size:11px;color:var(--muted);margin-left:auto;}
+.cl-empty{font-size:12px;color:var(--muted);font-style:italic;}
+.cl-progress{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.cl-bar-wrap{flex:1;height:4px;background:var(--g100);border-radius:2px;overflow:hidden;}
+.cl-bar{height:100%;background:var(--teal);border-radius:2px;transition:width .3s;}
+.cl-count{font-size:11px;color:var(--muted);white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -219,6 +256,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <input id="sheetUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=…&output=csv"/>
       <button class="btn btn-primary" onclick="loadSheet()">↺ Cargar planilla</button>
     </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+      <p class="admin-hint" style="margin-bottom:8px;"><strong>Planilla de Reservas</strong> — URL CSV de la hoja <code>Reservas</code> para los checklists de equipamiento.</p>
+      <div class="input-row">
+        <input id="reservasUrl" type="text" placeholder="URL CSV de la hoja Reservas…"/>
+        <button class="btn btn-primary" onclick="loadReservas()">↺ Cargar</button>
+      </div>
+    </div>
   </div>
 
   <div class="bar loading-bar" id="loadBar"><div class="spinner"></div>&nbsp;Leyendo planilla...</div>
@@ -240,10 +284,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 <script>
 /* ─── CONFIG ─── */
-const ADMIN_PIN = '1234';   // ← Cambiá este PIN
+const ADMIN_PIN     = '1234';   // ← Cambiá este PIN
 const SHEET_URL_KEY = 'cg_sheet_url';
 const ADMIN_SESSION_KEY = 'cg_admin';
-const DEFAULT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMr0HDGYSLo4UP0hb60pUYixUgIMlUAW54yDZnXktIMBa4VWun7Z40eNvTp51BGfbfMMeZtdW2s24N/pub?gid=1875192788&single=true&output=csv';
+const CHECKS_KEY    = 'cg_checks';
+const DEFAULT_URL   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMr0HDGYSLo4UP0hb60pUYixUgIMlUAW54yDZnXktIMBa4VWun7Z40eNvTp51BGfbfMMeZtdW2s24N/pub?gid=1875192788&single=true&output=csv';
+const RESERVAS_URL  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJsacUarUKwudCYupzQss_BENC8Ce3mtRXlu59B-mdhhuStARsNJ8CsviRwY0Rh_tOFSp6SJREypQv/pub?output=csv';
 
 const PROXIES = [
   u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
@@ -252,7 +298,8 @@ const PROXIES = [
 ];
 
 let allRows = [], dateCol = '', selectedDate = '', isAdmin = false;
-let tiempoAdicionalGlobal = 0; // valor fijo de celda X6
+let tiempoAdicionalGlobal = 0;
+let reservasRows = [];
 
 /* ─── ADMIN ACCESS ─── */
 function initAdmin() {
@@ -550,6 +597,11 @@ function renderRoutes(date) {
 
       if(am) html+=`<div class="abox ${ac}">${am}</div>`;
 
+      // ── CHECKLIST de equipamiento ──
+      const chkId = 'chk_' + ti + '_' + ri;
+      const chkItems = buildChecklist(r[C.client]||'', date);
+      html += renderChecklist(chkItems, chkId);
+
       // Botones navegación + llamada — usan openNav() para deep link con fallback
       html+=`<div class="brow">
         <button class="bmap" onclick="openNav('maps','${addrQ}','${mapsFallUrl}')">🗺 Google Maps</button>
@@ -658,12 +710,154 @@ function printDoc(body, team, date) {
     .drow{display:flex;gap:6px;font-size:11px;color:#666;padding:4px 0;border-bottom:1px dashed #eee;}
     .drow:last-child{border-bottom:none;}.dt{font-weight:700;color:#1a1a18;min-width:42px;}
     .pdf-bar,.brow,.ttabs{display:none!important;}
+    .chk-section{margin-top:10px;border-top:1px solid #eee;padding-top:8px;}
+    .chk-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:6px;}
+    .chk-count{background:#E6F1FB;color:#185FA5;border-radius:999px;padding:1px 6px;font-size:9px;}
+    .chk-count.done{background:#E1F5EE;color:#0F6E56;}
+    .chk-list{display:flex;flex-direction:column;gap:3px;}
+    .chk-item{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;border:1px solid #e0ddd5;background:#f4f2ed;}
+    .chk-item.checked{background:#E1F5EE;border-color:#9FE1CB;}
+    .chk-label{font-size:11px;flex:1;}.chk-item.checked .chk-label{text-decoration:line-through;color:#888;}
+    .chk-tag{font-size:9px;padding:1px 6px;border-radius:999px;font-weight:600;}
+    .tag-consola{background:#E6F1FB;color:#0C447C;}.tag-extra{background:#EEEDFE;color:#3C3489;}
+    .tag-modulo{background:#EAF3DE;color:#27500A;}.tag-horaextra{background:#FAEEDA;color:#854F0B;}
     @media print{.stop{page-break-inside:avoid;}}
   </style></head><body>
   <h1>Hoja de ruta — ${team}</h1>
   <div class="sub">CumpleGamer · ${labelD(date)} · Generado el ${new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}</div>
   ${body}
   </body></html>`;
+}
+
+/* ─── RESERVAS & CHECKLIST ─── */
+async function loadReservas() {
+  const attempts = [
+    () => fetchDirect(RESERVAS_URL),
+    ...PROXIES.map(p => () => fetchVia(p(RESERVAS_URL))),
+  ];
+  for (const attempt of attempts) {
+    try {
+      const text = await attempt();
+      if (isValidCSV(text)) { parseReservas(text); return; }
+    } catch(e) {}
+  }
+  console.warn('No se pudo cargar planilla de Reservas.');
+}
+
+function parseReservas(raw) {
+  const lines = raw.trim().split(/\r?\n/).filter(l => l.trim());
+  const headers = splitLine(lines[0]);
+  reservasRows = lines.slice(1).map(l => {
+    const vals = splitLine(l);
+    const obj = {};
+    headers.forEach((h,i) => { obj[h.trim()] = (vals[i]||'').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+  if (selectedDate) renderRoutes(selectedDate);
+}
+
+function normName(s){ return (s||'').toLowerCase().trim().replace(/\s+/g,' '); }
+function normDateStr(d){
+  if(!d) return '';
+  d = d.trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  const p = d.split('/');
+  if(p.length===3) return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+  return d;
+}
+
+function findReserva(clientName, eventDate) {
+  if(!reservasRows.length) return null;
+  const tDate = normDateStr(eventDate);
+  const tName = normName(clientName);
+  return reservasRows.find(r => {
+    const rDate = normDateStr(r['Fecha Evento']||'');
+    if(rDate !== tDate) return false;
+    const rName = normName(r['Nombre Cliente']||'');
+    return rName===tName || rName.includes(tName.split(' ')[0]) || tName.includes(rName.split(' ')[0]);
+  }) || null;
+}
+
+function buildChecklist(clientName, eventDate) {
+  const res = findReserva(clientName, eventDate);
+  if(!res) return [];
+  const items = [];
+
+  // Consolas — "1x PlayStation 5, 2x Xbox"
+  const consolas = res['Consolas']||'';
+  consolas.split(',').map(s=>s.trim()).filter(Boolean).forEach(c => {
+    const m = c.match(/^(\d+)x?\s*(.+)$/i);
+    if(m){
+      const qty=parseInt(m[1]), name=m[2].trim();
+      for(let i=0;i<qty;i++) items.push({label: qty>1?`${name} (${i+1}/${qty})`:name, type:'consola', typeLabel:'Consola'});
+    } else if(c) { items.push({label:c, type:'consola', typeLabel:'Consola'}); }
+  });
+
+  // Extras
+  const extras = res['Extras']||'';
+  extras.split(',').map(s=>s.trim()).filter(s=>s&&!/^ninguno$/i.test(s)).forEach(e => {
+    items.push({label:e, type:'extra', typeLabel:'Extra'});
+  });
+
+  // Módulos Adicionales
+  const modulos = res['Módulos Adicionales']||'';
+  modulos.split(',').map(s=>s.trim()).filter(s=>s&&!/^ninguno$/i.test(s)).forEach(m => {
+    items.push({label:m, type:'modulo', typeLabel:'Módulo'});
+  });
+
+  // Hora Extra Express
+  const horaExtra = res['Hora Extra Express']||'';
+  if(horaExtra && !/^no$/i.test(horaExtra.trim())) {
+    items.push({label:horaExtra, type:'hora', typeLabel:'Hora Extra'});
+  }
+
+  return items;
+}
+
+function renderChecklist(items, chkId) {
+  if(!items.length) return '';
+  const saved = JSON.parse(localStorage.getItem(CHECKS_KEY+'_'+chkId)||'{}');
+  const total = items.length;
+  const checked = items.filter((_,i) => saved[i]).length;
+  const pct = total ? Math.round(checked/total*100) : 0;
+
+  let html = `<div class="chk-section">
+    <div class="chk-title">
+      📦 Equipamiento a instalar
+      <span class="chk-count${checked===total&&total>0?' done':''}" id="${chkId}_count">${checked} / ${total}</span>
+    </div>
+    <div class="chk-progress"><div class="chk-bar-wrap"><div class="chk-bar" id="${chkId}_bar" style="width:${pct}%"></div></div></div>
+    <div class="chk-list">`;
+  items.forEach((item, ci) => {
+    const iid = `${chkId}_${ci}`;
+    const isChecked = !!saved[ci];
+    html += `<label class="chk-item${isChecked?' checked':''}" id="${iid}_row" onclick="toggleCheck('${chkId}',${ci},${total})">
+      <input type="checkbox" id="${iid}"${isChecked?' checked':''} onclick="event.stopPropagation();toggleCheck('${chkId}',${ci},${total})">
+      <span class="chk-label">${esc(item.label)}</span>
+      <span class="chk-tag tag-${item.type}">${esc(item.typeLabel)}</span>
+    </label>`;
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+function toggleCheck(chkId, ci, total) {
+  const saved = JSON.parse(localStorage.getItem(CHECKS_KEY+'_'+chkId)||'{}');
+  saved[ci] = !saved[ci];
+  localStorage.setItem(CHECKS_KEY+'_'+chkId, JSON.stringify(saved));
+
+  const iid = chkId+'_'+ci;
+  const row = document.getElementById(iid+'_row');
+  const cb  = document.getElementById(iid);
+  if(row) row.classList.toggle('checked', !!saved[ci]);
+  if(cb)  cb.checked = !!saved[ci];
+
+  const checked = Object.values(saved).filter(Boolean).length;
+  const pct = total ? Math.round(checked/total*100) : 0;
+  const counter = document.getElementById(chkId+'_count');
+  const bar = document.getElementById(chkId+'_bar');
+  if(counter){ counter.textContent = checked+' / '+total; counter.classList.toggle('done', checked===total&&total>0); }
+  if(bar) bar.style.width = pct+'%';
 }
 
 /* ─── NAVEGACIÓN MÓVIL ─── */
@@ -701,74 +895,17 @@ function openNav(app, addrQ, fallbackUrl) {
   iframe.src = appUrl;
 }
 
-/* ─── EXTRAS ─── */
-const EXTRAS_MAP = [
-  { match: /2\s*racing\s*ps5/i,         mins: 20, label: '2 Racing PS5' },
-  { match: /1\s*racing\s*ps5/i,         mins: 10, label: '1 Racing PS5' },
-  { match: /racing\s*ps5/i,             mins: 10, label: 'Racing PS5' },
-  { match: /vr\s*ps5/i,                 mins: 15, label: 'VR PS5' },
-  { match: /guitar\s*hero/i,            mins: 10, label: 'Guitar Hero Live PS5' },
-  { match: /3\s*m[oó]dulos?\s*extra/i,  mins: 40, label: '3 Módulos Extras' },
-  { match: /2\s*m[oó]dulos?\s*extra/i,  mins: 30, label: '2 Módulos Extras' },
-  { match: /m[oó]dulo\s*extra/i,        mins: 15, label: 'Módulo Extra' },
-];
-
-function calcExtras(raw) {
-  if (!raw || !raw.trim()) return 0;
-  let total = 0;
-  // Split by comma or newline for multiple selections
-  const parts = raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
-  parts.forEach(part => {
-    for (const e of EXTRAS_MAP) {
-      if (e.match.test(part)) { total += e.mins; break; }
-    }
-  });
-  return total;
-}
-
-function parseExtrasList(raw) {
-  if (!raw || !raw.trim()) return [];
-  const parts = raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
-  const result = [];
-  parts.forEach(part => {
-    for (const e of EXTRAS_MAP) {
-      if (e.match.test(part)) { result.push(e.label); break; }
-    }
-  });
-  return result;
-}
-
-/* ─── HELPERS ─── */
-function t2m(t){if(!t)return null;const m=t.match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:null;}
-function m2t(m){return`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;}
-function subM(t,n){const m=t2m(t);return m===null?'–':m2t(m-n);}
-function calcM(ie,es){const a=t2m(ie),b=t2m(es);return(a===null||b===null)?null:b-a;}
-function fmtPh(d){const c=d.replace(/\D/g,'');return c.length>=8?`+56 9 ${c.slice(-8,-4)} ${c.slice(-4)}`:d;}
-function normD(d){const m=d.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);if(!m)return d;const y=m[3].length===2?'20'+m[3]:m[3];return`${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;}
-function labelD(d){
-  const mo=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const m=d.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
-  if(!m)return d;
-  const y=m[3].length===2?'20'+m[3]:m[3];
-  return`${parseInt(m[1])} de ${mo[parseInt(m[2])-1]} ${y}`;
-}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function setLoad(v){document.getElementById('loadBar').classList.toggle('on',v);}
-function showErr(msg){const e=document.getElementById('errBar');e.textContent=msg;e.classList.add('on','block');}
-function hideErr(){document.getElementById('errBar').classList.remove('on');}
-
 /* ─── INIT ─── */
-window.onload = () => {
-  // Restore saved URL or use default
+document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem(SHEET_URL_KEY) || DEFAULT_URL;
   document.getElementById('sheetUrl').value = saved;
-
-  // Init admin mode
+  const savedRes = RESERVAS_URL;
+  if(document.getElementById('reservasUrl')) document.getElementById('reservasUrl').value = savedRes;
   initAdmin();
-
-  // Auto-load sheet
   loadSheet();
-};
+  loadReservas();
+});
+
 </script>
 </body>
 </html>
