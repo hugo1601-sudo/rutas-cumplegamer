@@ -398,22 +398,6 @@ async function loadSheet() {
   showErr('No se pudo leer la planilla. Verificá que esté publicada como CSV con acceso público.\n\nEn Google Sheets: Archivo → Compartir → Publicar en la web → elegí la hoja → formato CSV → Publicar.');
 }
 
-async function fetchDirect(url) {
-  const r = await fetch(url, { cache: 'no-cache' });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.text();
-}
-async function fetchVia(proxyUrl) {
-  const r = await fetch(proxyUrl, { cache: 'no-cache' });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.text();
-}
-function isValidCSV(t) {
-  if (!t || t.length < 10) return false;
-  const s = t.trim();
-  return !s.startsWith('<!') && !s.startsWith('<html') && s.split('\n').length >= 2;
-}
-
 /* ─── PARSE ─── */
 function parseCSV(raw) {
   const lines = raw.trim().split(/\r?\n/).filter(l => l.trim());
@@ -731,15 +715,17 @@ function printDoc(body, team, date) {
 
 /* ─── RESERVAS & CHECKLIST ─── */
 async function loadReservas() {
+  // Misma cascada de proxies que loadSheet
   const attempts = [
     () => fetchDirect(RESERVAS_URL),
-    ...PROXIES.map(p => () => fetchVia(p(RESERVAS_URL))),
+    () => fetchVia('https://corsproxy.io/?' + encodeURIComponent(RESERVAS_URL)),
+    () => fetchVia('https://api.allorigins.win/raw?url=' + encodeURIComponent(RESERVAS_URL)),
   ];
   for (const attempt of attempts) {
     try {
       const text = await attempt();
       if (isValidCSV(text)) { parseReservas(text); return; }
-    } catch(e) {}
+    } catch(e) { /* try next */ }
   }
   console.warn('No se pudo cargar planilla de Reservas.');
 }
@@ -893,6 +879,35 @@ function openNav(app, addrQ, fallbackUrl) {
   }, { once: true });
 
   iframe.src = appUrl;
+}
+
+/* ─── HELPERS UI ─── */
+function setLoad(v) {
+  document.getElementById('loadBar').classList.toggle('on', v);
+}
+function showErr(msg) {
+  const e = document.getElementById('errBar');
+  e.style.whiteSpace = 'pre-line';
+  e.textContent = msg;
+  e.classList.add('on', 'block');
+}
+function hideErr() {
+  document.getElementById('errBar').classList.remove('on');
+}
+function isValidCSV(t) {
+  if (!t || t.length < 10) return false;
+  const s = t.trim();
+  return !s.startsWith('<!') && !s.startsWith('<html') && s.split('\n').length >= 2;
+}
+async function fetchDirect(url) {
+  const r = await fetch(url, { cache: 'no-cache' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.text();
+}
+async function fetchVia(proxyUrl) {
+  const r = await fetch(proxyUrl, { cache: 'no-cache' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.text();
 }
 
 /* ─── INIT ─── */
