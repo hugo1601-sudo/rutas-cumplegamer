@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
 :root {
   --blue:#185FA5; --blue-l:#E6F1FB; --blue-m:#B5D4F4;
@@ -134,6 +136,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .map-pin-num{background:var(--blue);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);font-family:'DM Sans',sans-serif;}
 .map-pin-num.last{background:var(--teal);}
 .map-attr{font-size:10px;color:var(--muted);text-align:right;margin-top:-4px;margin-bottom:8px;}
+
+/* ── CHECK-IN ── */
+.ck-summary{font-size:12px;font-weight:500;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:9px 13px;margin-bottom:1rem;}
+.ckbar{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;}
+.ckbtn{flex:1;min-width:130px;height:36px;border-radius:7px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);transition:background .15s,color .15s,border-color .15s;}
+.ckbtn:hover:not(:disabled){border-color:var(--blue);color:var(--blue);}
+.ckbtn:disabled{opacity:.4;cursor:not-allowed;}
+.ckbtn.done{background:var(--teal-l);border-color:var(--teal-m);color:var(--teal);}
 
 /* ── TIMELINE ── */
 .tl{position:relative;padding-left:34px;}
@@ -290,6 +300,34 @@ const GEOCODE_CACHE_KEY = 'cg_geocode_cache';
 let geocodeCache = {};
 try { geocodeCache = JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) || '{}'); } catch(e) { geocodeCache = {}; }
 let lastGeocodeTime = 0;
+
+/* ─── FIREBASE (check-in en tiempo real) ───
+   Pegá acá la MISMA configuración que usás en la app de inventario
+   (Firebase Console → ⚙ Configuración del proyecto → tus apps → SDK setup and configuration).
+   Mientras diga "PEGA_TU_API_KEY" el check-in queda desactivado (el resto de la app funciona igual). */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBzIb_cGxmS43Xyz5vLtiNgyXm1tA7Zp9U",
+  authDomain: "cumple-gamer.firebaseapp.com",
+  projectId: "cumple-gamer",
+  storageBucket: "cumple-gamer.firebasestorage.app",
+  messagingSenderId: "489208760103",
+  appId: "1:489208760103:web:3c7924d36952ada6284b02"
+};
+
+let db = null;
+let FIREBASE_READY = false;
+try {
+  if (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== 'PEGA_TU_API_KEY') {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    FIREBASE_READY = true;
+  }
+} catch(e) { console.warn('Firebase no se pudo inicializar:', e); }
+
+let checkinsUnsub = null;   // función para cancelar el listener de check-ins al cambiar de fecha
+let checkinState = {};      // { [cid]: {llegada, instalada, ...} } — último estado conocido desde Firestore
+let cidMeta = {};           // { [cid]: {date, team, client, instStart} } — datos para escribir el check-in
+let teamCids = {};          // { [ti]: [cid, cid, ...] } — paradas de cada equipo, para el resumen
 
 /* ─── ADMIN ACCESS ─── */
 function initAdmin() {
@@ -483,6 +521,9 @@ function renderRoutes(date) {
   Object.values(mapInstances).forEach(m => { try { m.remove(); } catch(e){} });
   mapInstances = {};
   teamDataCache = {};
+  cidMeta = {};
+  teamCids = {};
+  checkinState = {};
   if (!rows.length) {
     document.getElementById('routeContent').innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>No hay eventos para esta fecha.</p></div>`;
     return;
@@ -506,6 +547,7 @@ function renderRoutes(date) {
     const zonas=[...new Set(trows.map(r=>r[C.comuna]).filter(Boolean))];
 
     teamDataCache[ti] = { team, trows, C };
+    teamCids[ti] = [];
 
     html+=`<div class="panel${ti===0?' active':''}" id="p${ti}">`;
     html+=`<div class="pdf-bar">
@@ -522,6 +564,8 @@ function renderRoutes(date) {
       <div class="met"><div class="met-l">Último evento</div><div class="met-v">${last[C.eventEnd]||'–'}</div><div class="met-s">fin ${esc(team)}</div></div>
       <div class="met"><div class="met-l">Zona</div><div class="met-v" style="font-size:13px">${zonas[0]||'–'}</div><div class="met-s">${zonas.join(' / ')}</div></div>
     </div>`;
+
+    html+=`<div class="ck-summary" id="ckSummary${ti}">${FIREBASE_READY?'📋 Seguimiento: cargando…':'⏳ Seguimiento no disponible (falta configurar Firebase — ver constante FIREBASE_CONFIG)'}</div>`;
 
     html+=`<div class="map-wrap" id="mapwrap${ti}">
       <div class="map-box" id="mapbox${ti}"></div>
@@ -557,6 +601,11 @@ function renderRoutes(date) {
       const hasTorneo=torneo&&!/^no$/i.test(torneo.trim())&&torneo.trim()!=='';
 
       const extrasList = parseExtrasList(extrasRaw);
+
+      // ── CHECK-IN: id estable para esta parada (fecha + equipo + cliente + hora instalación) ──
+      const cid = checkinId(date, team, r, C);
+      cidMeta[cid] = { date: normD(date), team, client: r[C.client]||'', instStart: r[C.instStart]||'' };
+      teamCids[ti].push(cid);
 
       html+=`<div class="stop"><div class="dot${isLast?' last':''}">${ri+1}</div><div class="sc">`;
 
@@ -605,6 +654,14 @@ function renderRoutes(date) {
 
       if(am) html+=`<div class="abox ${ac}">${am}</div>`;
 
+      // Check-in en tiempo real (llegada / instalación lista)
+      if (FIREBASE_READY) {
+        html+=`<div class="ckbar" id="ck-${cid}">
+          <button class="ckbtn ck-llegada" onclick="toggleCheckin('${cid}','llegada')">○ Llegué</button>
+          <button class="ckbtn ck-instalada" onclick="toggleCheckin('${cid}','instalada')" disabled>🛠 Instalación lista</button>
+        </div>`;
+      }
+
       // Botones navegación + llamada — usan openNav() para deep link con fallback
       html+=`<div class="brow">
         <button class="bmap" onclick="openNav('maps','${addrQ}','${mapsFallUrl}')">🗺 Google Maps</button>
@@ -626,11 +683,98 @@ function renderRoutes(date) {
   });
 
   document.getElementById('routeContent').innerHTML = html;
+  subscribeCheckins(date);
 }
 
 function switchTab(idx, total) {
   for(let i=0;i<total;i++) document.getElementById(`p${i}`)?.classList.toggle('active',i===idx);
   document.querySelectorAll('.ttab').forEach((t,i) => t.classList.toggle('active',i===idx));
+}
+
+/* ─── CHECK-IN EN TIEMPO REAL ─── */
+function checkinId(date, team, r, C) {
+  const raw = `${normD(date)}__${team}__${r[C.client]||''}__${r[C.instStart]||''}`;
+  return raw.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar tildes
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 140) || ('cid_' + Math.random().toString(36).slice(2));
+}
+
+function subscribeCheckins(date) {
+  if (checkinsUnsub) { checkinsUnsub(); checkinsUnsub = null; }
+  checkinState = {};
+  if (!FIREBASE_READY) return;
+  const dNorm = normD(date);
+  checkinsUnsub = db.collection('checkins').where('date', '==', dNorm).onSnapshot(snap => {
+    checkinState = {};
+    snap.forEach(doc => { checkinState[doc.id] = doc.data(); });
+    Object.keys(cidMeta).forEach(cid => applyCheckinState(cid, checkinState[cid] || {}));
+    updateAllSummaries();
+  }, err => {
+    console.warn('No se pudo escuchar los check-ins:', err);
+    Object.keys(teamCids).forEach(ti => {
+      const el = document.getElementById(`ckSummary${ti}`);
+      if (el) el.textContent = '⚠ No se pudo conectar con el seguimiento en tiempo real.';
+    });
+  });
+}
+
+function applyCheckinState(cid, data) {
+  const bar = document.getElementById(`ck-${cid}`);
+  if (!bar) return;
+  const bLleg = bar.querySelector('.ck-llegada');
+  const bInst = bar.querySelector('.ck-instalada');
+  const llegadaAt = data.llegada && data.llegada.at;
+  const instaladaAt = data.instalada && data.instalada.at;
+  if (bLleg) {
+    bLleg.classList.toggle('done', !!llegadaAt);
+    bLleg.textContent = llegadaAt ? `✅ Llegó · ${fmtTime(llegadaAt)}` : '○ Llegué';
+  }
+  if (bInst) {
+    bInst.disabled = !llegadaAt;
+    bInst.classList.toggle('done', !!instaladaAt);
+    bInst.textContent = instaladaAt ? `🛠 Instalado · ${fmtTime(instaladaAt)}` : '🛠 Instalación lista';
+  }
+}
+
+function updateAllSummaries() {
+  Object.keys(teamCids).forEach(ti => {
+    const cids = teamCids[ti];
+    const el = document.getElementById(`ckSummary${ti}`);
+    if (!el || !cids.length) return;
+    let llegaron = 0, instalados = 0;
+    cids.forEach(cid => {
+      const d = checkinState[cid];
+      if (d && d.llegada) llegaron++;
+      if (d && d.instalada) instalados++;
+    });
+    el.textContent = `📋 Seguimiento: ${llegaron}/${cids.length} llegaron · ${instalados}/${cids.length} con instalación lista`;
+  });
+}
+
+async function toggleCheckin(cid, field) {
+  if (!FIREBASE_READY) { alert('El check-in en tiempo real todavía no está configurado.'); return; }
+  const meta = cidMeta[cid];
+  if (!meta) return;
+  const ref = db.collection('checkins').doc(cid);
+  try {
+    const cur = checkinState[cid] || {};
+    if (field === 'instalada' && !cur.llegada) {
+      alert('Primero marcá "Llegué" antes de marcar la instalación como lista.');
+      return;
+    }
+    const isSet = !!cur[field];
+    const update = { date: meta.date, team: meta.team, client: meta.client, instStart: meta.instStart };
+    update[field] = isSet ? firebase.firestore.FieldValue.delete() : { at: new Date().toISOString() };
+    await ref.set(update, { merge: true });
+  } catch(e) {
+    console.error(e);
+    alert('No se pudo actualizar el check-in. Revisá tu conexión a internet.');
+  }
+}
+
+function fmtTime(iso) {
+  try { return new Date(iso).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }); }
+  catch(e) { return ''; }
 }
 
 /* ─── VISTA LISTA / MAPA ─── */
@@ -914,7 +1058,7 @@ function doPDF(ti, team, date) {
   const panel = document.getElementById(`p${ti}`);
   if (!panel) return;
   const clone = panel.cloneNode(true);
-  clone.querySelectorAll('.pdf-bar,.brow,.view-toggle,.map-wrap').forEach(e => e.remove());
+  clone.querySelectorAll('.pdf-bar,.brow,.view-toggle,.map-wrap,.ckbar,.ck-summary').forEach(e => e.remove());
   clone.querySelectorAll('.list-view').forEach(e => e.classList.add('on')); // el PDF siempre imprime la lista, no el mapa
   const w = window.open('', '_blank');
   w.document.write(printDoc(clone.innerHTML, team, date));
