@@ -730,13 +730,16 @@ function buildDates() {
   const allDates = [...new Set(allRows.map(r => r[dateCol]).filter(Boolean))]
     .sort((a,b) => normD(a).localeCompare(normD(b)));
 
-  // Para usuarios normales, ocultar fechas con más de 4 días de antigüedad
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 4);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
+  // Para usuarios normales, mostrar solo un rango acotado: desde 4 días atrás hasta 2 días adelante
+  const lowerCutoff = new Date();
+  lowerCutoff.setDate(lowerCutoff.getDate() - 4);
+  const lowerStr = lowerCutoff.toISOString().split('T')[0];
+  const upperCutoff = new Date();
+  upperCutoff.setDate(upperCutoff.getDate() + 2);
+  const upperStr = upperCutoff.toISOString().split('T')[0];
   const dates = isAdmin
     ? allDates
-    : allDates.filter(d => normD(d) >= cutoffStr);
+    : allDates.filter(d => normD(d) >= lowerStr && normD(d) <= upperStr);
 
   if (!dates.length) { showErr('No hay fechas disponibles.'); return; }
 
