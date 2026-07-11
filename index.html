@@ -174,6 +174,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .focus-pbtn:disabled{opacity:.3;cursor:not-allowed;}
 .focus-done-msg{padding:2.5rem 1rem;text-align:center;color:var(--muted);font-size:14px;}
 
+/* ── MAPA GENERAL (ADMIN) ── */
+.admin-map-sec{display:none;background:var(--surface);border:1px solid var(--amber-m);border-radius:var(--rl);padding:1.1rem 1.25rem;margin-bottom:1.25rem;}
+.admin-map-sec.on{display:block;}
+.admin-map-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.admin-map-title{font-size:14px;font-weight:600;}
+.admin-map-body{display:none;margin-top:12px;}
+.admin-map-body.open{display:block;}
+.admin-map-legend{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+.admin-map-leg-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);background:var(--bg);border-radius:7px;padding:6px 10px;}
+.admin-map-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+
+/* ── COMPARACIÓN TRAYECTO REAL VS ESTIMADO ── */
+.travel-cmp{font-size:10px;font-weight:600;margin-left:6px;padding:1px 7px;border-radius:999px;white-space:nowrap;}
+.travel-cmp.ok{background:var(--teal-l);color:var(--teal);}
+.travel-cmp.warn{background:var(--amber-l);color:var(--amber);}
+.travel-cmp.crit{background:var(--red-l);color:var(--red);}
+
+/* ── ESTADÍSTICAS DE MANEJO POR EQUIPO ── */
+.drive-stats{display:none;font-size:13px;font-weight:600;color:#0C447C;background:var(--blue-l);border-radius:var(--r);padding:9px 12px;margin-bottom:10px;}
+.drive-stats.on{display:block;}
+.drive-stats.warn{color:var(--amber);background:var(--amber-l);}
+
 /* ── TIMELINE ── */
 .tl{position:relative;padding-left:34px;}
 .tl::before{content:'';position:absolute;left:11px;top:4px;bottom:4px;width:1.5px;background:var(--g100);}
@@ -234,7 +256,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .admin-trigger{position:fixed;bottom:0;left:0;width:48px;height:48px;cursor:pointer;z-index:50;opacity:0;}
 
 @media print{
-  .topbar,.admin-panel,.date-sec,.ttabs,.pdf-bar,.brow,.admin-trigger,.view-toggle,.map-wrap,.focus-wrap,.ckbar,.ck-summary{display:none!important;}
+  .topbar,.admin-panel,.date-sec,.ttabs,.pdf-bar,.brow,.admin-trigger,.view-toggle,.map-wrap,.focus-wrap,.ckbar,.ck-summary,.admin-map-sec{display:none!important;}
   .main{max-width:100%;padding:0;}
   .panel{display:block!important;}
   .list-view{display:block!important;}
@@ -299,6 +321,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="date-pills" id="datePills"></div>
   </div>
 
+  <!-- MAPA GENERAL (solo admin) -->
+  <div class="admin-map-sec" id="adminMapSec">
+    <div class="admin-map-head">
+      <div class="admin-map-title">🗺 Mapa general — todos los equipos</div>
+      <button class="btn btn-sm" id="adminMapToggleBtn" onclick="toggleAdminMap()">Mostrar mapa</button>
+    </div>
+    <div class="admin-map-body" id="adminMapBody">
+      <div class="map-box" id="adminMapBox"></div>
+      <div class="map-attr">Mapa © OpenStreetMap contributors</div>
+      <div class="map-status" id="adminMapStatus"></div>
+      <div class="admin-map-legend" id="adminMapLegend"></div>
+    </div>
+  </div>
+
   <!-- ROUTE CONTENT -->
   <div id="routeContent"></div>
 
@@ -326,6 +362,9 @@ let tiempoAdicionalGlobal = 0; // valor fijo de celda X6
 /* ─── MAPA: estado ─── */
 let teamDataCache = {};   // { [ti]: { team, trows, C } } — datos para renderizar el mapa por equipo
 let mapInstances = {};    // { [ti]: instancia Leaflet } — se resetea cada vez que se recarga la planilla
+let adminMapInstance = null;
+let adminMapOpen = false;
+const TEAM_COLORS = ['#185FA5', '#0F6E56', '#A32D2D', '#854F0B', '#5B21B6', '#B5179E', '#0E7490', '#65A30D'];
 const GEOCODE_CACHE_KEY = 'cg_geocode_cache';
 let geocodeCache = {};
 try { geocodeCache = JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) || '{}'); } catch(e) { geocodeCache = {}; }
@@ -411,6 +450,7 @@ function grantAdmin() {
   document.getElementById('adminPanel').classList.add('on');
   document.getElementById('adminBadge').style.display = 'inline-flex';
   document.getElementById('lockBtn').classList.add('visible');
+  document.getElementById('adminMapSec')?.classList.add('on');
   if (allRows.length) buildDates();
 }
 
@@ -420,6 +460,7 @@ function lockAdmin() {
   document.getElementById('adminPanel').classList.remove('on');
   document.getElementById('adminBadge').style.display = 'none';
   document.getElementById('lockBtn').classList.remove('visible');
+  document.getElementById('adminMapSec')?.classList.remove('on');
   const url = new URL(window.location.href);
   url.searchParams.delete('admin');
   window.history.replaceState({}, '', url);
@@ -605,6 +646,7 @@ function renderRoutes(date) {
     html+=`<div class="map-wrap" id="mapwrap${ti}">
       <div class="map-box" id="mapbox${ti}"></div>
       <div class="map-attr">Mapa © OpenStreetMap contributors</div>
+      <div class="drive-stats" id="driveStats${ti}"></div>
       <div class="map-status" id="mapstatus${ti}"></div>
       <div class="map-legend" id="maplegend${ti}"></div>
     </div>`;
@@ -675,7 +717,7 @@ function renderRoutes(date) {
       html+=`<div class="tbar">`;
       if(r[C.instStart]) html+=`<div class="tb"><span class="tbl">Instalación</span><span class="tbv">${r[C.instStart]}${r[C.instEnd]?' → '+r[C.instEnd]:''}</span></div>`;
       if(r[C.eventStart]) html+=`<span class="tsep">|</span><div class="tb"><span class="tbl">Evento</span><span class="tbv">${r[C.eventStart]}${r[C.eventEnd]?' → '+r[C.eventEnd]:''}</span></div>`;
-      if(!isLast && travelToNext) html+=`<span class="tsep">|</span><div class="tb"><span class="tbl">Trayecto sig.</span><span class="tbv">${travelToNext} min</span></div>`;
+      if(!isLast && travelToNext) html+=`<span class="tsep">|</span><div class="tb"><span class="tbl">Trayecto sig.</span><span class="tbv">${travelToNext} min</span><span class="travel-cmp" id="travelcmp-${ti}-${ri}"></span></div>`;
       if(isLast && r[C.travelBase]) html+=`<span class="tsep">|</span><div class="tb"><span class="tbl">Retorno base</span><span class="tbv">${r[C.travelBase]} min</span></div>`;
       html+=`</div>`;
 
@@ -721,6 +763,7 @@ function renderRoutes(date) {
 
   document.getElementById('routeContent').innerHTML = html;
   subscribeCheckins(date);
+  if (isAdmin && adminMapOpen) renderAdminMap();
 }
 
 function switchTab(idx, total) {
@@ -1052,6 +1095,9 @@ async function renderTeamMap(ti) {
   }
   setTimeout(() => map.invalidateSize(), 60);
 
+  const driveStatsEl = document.getElementById(`driveStats${ti}`);
+  clearTravelCmp(ti, trows.length);
+
   // Trazar la ruta entre paradas ubicadas (respetando el orden de instalación)
   if (points.length > 1) {
     try {
@@ -1061,8 +1107,43 @@ async function renderTeamMap(ti) {
       const json = await res.json();
       if (map._renderToken !== token) return;
       if (json.routes && json.routes[0]) {
-        const latlngs = json.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        const route = json.routes[0];
+        const latlngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
         map._routeLayer = L.polyline(latlngs, { color: '#185FA5', weight: 3, opacity: .7 }).addTo(map);
+
+        // ── Estadísticas de manejo del día para este equipo ──
+        if (driveStatsEl) {
+          const distKm = (route.distance / 1000).toFixed(1);
+          const durMin = Math.round(route.duration / 60);
+          const hh = Math.floor(durMin / 60), mm = durMin % 60;
+          const durLabel = hh > 0 ? `${hh}h ${mm}min` : `${mm} min`;
+          driveStatsEl.textContent = `🚗 Recorrido real estimado: ${distKm} km · ${durLabel} de manejo entre paradas${failed.length ? ' (no incluye las direcciones sin ubicar)' : ''}`;
+          driveStatsEl.classList.toggle('warn', failed.length > 0);
+          driveStatsEl.classList.add('on');
+        }
+
+        // ── Comparar cada tramo real (OSRM) contra el tiempo estimado de la planilla ──
+        (route.legs || []).forEach((leg, li) => {
+          const from = points[li], to = points[li + 1];
+          if (!from || !to || to.idx !== from.idx + 1) return; // hay una parada sin ubicar entre medio: no comparable
+          const estimated = parseInt(trows[to.idx][C.travelNext]);
+          if (!estimated) return;
+          const realMin = Math.round(leg.duration / 60);
+          const diff = realMin - estimated;
+          const el = document.getElementById(`travelcmp-${ti}-${from.idx}`);
+          if (!el) return;
+          if (diff >= 15 || realMin > estimated * 1.6) {
+            el.textContent = `real ${realMin} min (+${diff})`;
+            el.className = 'travel-cmp crit';
+          } else if (Math.abs(diff) >= 8 || realMin > estimated * 1.3) {
+            const sign = diff > 0 ? '+' : '';
+            el.textContent = `real ${realMin} min (${sign}${diff})`;
+            el.className = 'travel-cmp warn';
+          } else {
+            el.textContent = `real ${realMin} min ✓`;
+            el.className = 'travel-cmp ok';
+          }
+        });
       } else {
         throw new Error('sin ruta');
       }
@@ -1070,8 +1151,115 @@ async function renderTeamMap(ti) {
       if (map._renderToken !== token) return;
       // Respaldo: línea recta entre paradas si el servicio de ruteo falla
       map._routeLayer = L.polyline(points.map(p => [p.lat, p.lon]), { color: '#185FA5', weight: 3, opacity: .5, dashArray: '6,6' }).addTo(map);
+      if (driveStatsEl) {
+        driveStatsEl.textContent = '⚠ No se pudo calcular el recorrido real (servicio de ruteo no disponible en este momento).';
+        driveStatsEl.classList.add('on', 'warn');
+      }
     }
+  } else if (driveStatsEl) {
+    driveStatsEl.classList.remove('on');
   }
+}
+
+function clearTravelCmp(ti, count) {
+  for (let i = 0; i < count; i++) {
+    const el = document.getElementById(`travelcmp-${ti}-${i}`);
+    if (el) { el.textContent = ''; el.className = 'travel-cmp'; }
+  }
+}
+
+/* ─── MAPA GENERAL (ADMIN): todos los equipos a la vez, cada uno con su color ─── */
+function toggleAdminMap() {
+  adminMapOpen = !adminMapOpen;
+  document.getElementById('adminMapBody')?.classList.toggle('open', adminMapOpen);
+  const btn = document.getElementById('adminMapToggleBtn');
+  if (btn) btn.textContent = adminMapOpen ? 'Ocultar mapa' : 'Mostrar mapa';
+  if (adminMapOpen) renderAdminMap();
+}
+
+async function renderAdminMap() {
+  const boxEl = document.getElementById('adminMapBox');
+  const statusEl = document.getElementById('adminMapStatus');
+  const legendEl = document.getElementById('adminMapLegend');
+  if (!boxEl) return;
+  const tis = Object.keys(teamDataCache);
+  if (!tis.length) { if (statusEl) statusEl.textContent = 'No hay datos para esta fecha.'; return; }
+
+  if (!adminMapInstance) {
+    adminMapInstance = L.map(boxEl).setView([-33.45, -70.66], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 19
+    }).addTo(adminMapInstance);
+    adminMapInstance._layer = L.layerGroup().addTo(adminMapInstance);
+  } else {
+    setTimeout(() => adminMapInstance.invalidateSize(), 60);
+  }
+  const map = adminMapInstance;
+  map._layer.clearLayers();
+  legendEl.innerHTML = '';
+  const token = Symbol();
+  map._token = token;
+
+  const allBounds = [];
+  for (let k = 0; k < tis.length; k++) {
+    const ti = tis[k];
+    const { team, trows, C } = teamDataCache[ti];
+    const color = TEAM_COLORS[k % TEAM_COLORS.length];
+    if (statusEl) statusEl.textContent = `📍 Ubicando ${team}... (${k+1}/${tis.length} equipos)`;
+
+    const points = [];
+    for (let i = 0; i < trows.length; i++) {
+      const r = trows[i];
+      if (!r[C.address]) continue;
+      const coords = await geocodeAddress(r[C.address], r[C.comuna]);
+      if (map._token !== token) return;
+      if (coords) points.push({ row: r, idx: i, ...coords });
+    }
+
+    points.forEach(p => {
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="map-pin-num" style="background:${color}">${p.idx+1}</div>`,
+        iconSize: [24,24], iconAnchor: [12,12], popupAnchor: [0,-12]
+      });
+      L.marker([p.lat, p.lon], { icon })
+        .bindPopup(`<div style="font-family:'DM Sans',sans-serif;min-width:170px"><div style="font-weight:600;font-size:12px;color:${color}">${esc(team)}</div><div style="font-size:13px;font-weight:600;margin:2px 0">${esc(p.row[C.client]||'Cliente')}</div><div style="font-size:11px;color:#888">${esc(p.row[C.address]||'')}${p.row[C.comuna]?', '+esc(p.row[C.comuna]):''}</div></div>`)
+        .addTo(map._layer);
+      allBounds.push([p.lat, p.lon]);
+    });
+
+    let statLabel = '';
+    if (points.length > 1) {
+      try {
+        const coordStr = points.map(p => `${p.lon},${p.lat}`).join(';');
+        const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (map._token !== token) return;
+        if (json.routes && json.routes[0]) {
+          const route = json.routes[0];
+          const latlngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+          L.polyline(latlngs, { color, weight: 3, opacity: .75 }).addTo(map._layer);
+          const distKm = (route.distance / 1000).toFixed(1);
+          const durMin = Math.round(route.duration / 60);
+          statLabel = ` · ${distKm} km · ${durMin} min manejando`;
+        } else { throw new Error('sin ruta'); }
+      } catch(e) {
+        if (map._token !== token) return;
+        L.polyline(points.map(p => [p.lat, p.lon]), { color, weight: 3, opacity: .45, dashArray: '6,6' }).addTo(map._layer);
+      }
+    }
+
+    const legItem = document.createElement('div');
+    legItem.className = 'admin-map-leg-item';
+    legItem.innerHTML = `<span class="admin-map-swatch" style="background:${color}"></span><span>${esc(team)} · ${points.length}/${trows.length} paradas ubicadas${statLabel}</span>`;
+    legendEl.appendChild(legItem);
+  }
+
+  if (statusEl) statusEl.textContent = '';
+  if (allBounds.length) map.fitBounds(L.latLngBounds(allBounds), { padding: [30,30] });
+  setTimeout(() => map.invalidateSize(), 60);
 }
 
 /* ─── UBICACIÓN MANUAL (respaldo cuando el geocodificador no encuentra la dirección) ─── */
