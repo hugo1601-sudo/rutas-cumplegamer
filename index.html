@@ -71,6 +71,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .btn-confirm{height:36px;padding:0 14px;border-radius:var(--r);border:none;background:var(--blue);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;}
 .btn-confirm:hover{background:#0C447C;}
 
+.picking-modal{width:380px;max-width:92vw;}
+.picking-body{white-space:pre-line;font-size:13px;line-height:1.7;color:var(--text);max-height:340px;overflow-y:auto;margin-bottom:4px;}
+.picking-body ul{padding-left:20px;margin:0;}
+.picking-body li{margin-bottom:6px;}
+.picking-empty{color:var(--muted);font-size:13px;}
+.bpicking{color:#5B21B6;border-color:#C4B5FD;}
+.bpicking:hover{background:#F3EBFF;}
+
 /* ── NOTICES ── */
 .bar{padding:10px 16px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;display:none;}
 .bar.on{display:flex;align-items:center;gap:8px;}
@@ -282,6 +290,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
+<!-- PICKING MODAL -->
+<div class="modal-overlay" id="pickingModal" onclick="if(event.target===this)closePicking()">
+  <div class="modal picking-modal">
+    <h3 id="pickingTitle">📦 Picking</h3>
+    <div class="picking-body" id="pickingContent"></div>
+    <div class="modal-btns">
+      <button class="btn-confirm" onclick="closePicking()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="topbar-left">
@@ -310,6 +329,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <input id="sheetUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=…&output=csv"/>
       <button class="btn btn-primary" onclick="loadSheet()">↺ Cargar planilla</button>
     </div>
+
+    <p class="admin-hint" style="margin-top:18px">
+      📦 Planilla de <strong>Reservas</strong> (de ahí sale la columna "Picking"). Es una planilla distinta a la de rutas; se cruza automáticamente por <strong>Fecha + Nombre de cliente</strong>.<br>
+      No hace falta publicarla: alcanza con que esté compartida como <code>Cualquiera con el enlace puede ver</code>, y pegás el link normal de edición.
+    </p>
+    <div class="input-row">
+      <input id="pickingUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/…/edit?gid=…"/>
+      <button class="btn btn-primary" onclick="savePickingUrl()">↺ Cargar picking</button>
+    </div>
+    <div class="sheet-hint" id="pickingLoadStatus"></div>
   </div>
 
   <div class="bar loading-bar" id="loadBar"><div class="spinner"></div>&nbsp;Leyendo planilla...</div>
@@ -350,6 +379,12 @@ const SHEET_URL_KEY = 'cg_sheet_url';
 const ADMIN_SESSION_KEY = 'cg_admin';
 const DEFAULT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMr0HDGYSLo4UP0hb60pUYixUgIMlUAW54yDZnXktIMBa4VWun7Z40eNvTp51BGfbfMMeZtdW2s24N/pub?gid=1875192788&single=true&output=csv';
 
+// Planilla de Reservas (fuente de la columna "Picking"). Es una planilla DISTINTA a la de rutas —
+// se cruza por Fecha + Nombre de cliente. No hace falta "Publicar en la web", alcanza con
+// que esté compartida como "Cualquiera con el enlace puede ver".
+const PICKING_URL_KEY = 'cg_picking_url';
+const PICKING_DEFAULT_URL = 'https://docs.google.com/spreadsheets/d/1ZJ1sUgj2-mLwlbeWPmr1CrvOVHis5WrBr5-oJs7Rn74/edit?pli=1&gid=547008435#gid=547008435';
+
 const PROXIES = [
   u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
   u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -358,6 +393,7 @@ const PROXIES = [
 
 let allRows = [], dateCol = '', selectedDate = '', isAdmin = false;
 let tiempoAdicionalGlobal = 0; // valor fijo de celda X6
+let pickingRows = [], pickingIndex = {}; // datos de la planilla de reservas, indexados por fecha+cliente
 
 /* ─── MAPA: estado ─── */
 let teamDataCache = {};   // { [ti]: { team, trows, C } } — datos para renderizar el mapa por equipo
@@ -445,6 +481,29 @@ function checkPin() {
   }
 }
 
+/* ─── PICKING ─── */
+function openPickingFromBtn(btn) {
+  openPicking(btn.dataset.picking || '', btn.dataset.client || '');
+}
+
+function openPicking(raw, client) {
+  document.getElementById('pickingTitle').textContent = `📦 Picking${client ? ' — ' + client : ''}`;
+  const content = document.getElementById('pickingContent');
+  const items = (raw||'').split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  if (!items.length) {
+    content.innerHTML = `<div class="picking-empty">No hay datos de picking para esta parada.</div>`;
+  } else if (items.length > 1) {
+    content.innerHTML = '<ul>' + items.map(i => `<li>${esc(i)}</li>`).join('') + '</ul>';
+  } else {
+    content.textContent = items[0];
+  }
+  document.getElementById('pickingModal').classList.add('on');
+}
+
+function closePicking() {
+  document.getElementById('pickingModal').classList.remove('on');
+}
+
 function grantAdmin() {
   isAdmin = true;
   document.getElementById('adminPanel').classList.add('on');
@@ -468,13 +527,27 @@ function lockAdmin() {
 }
 
 /* ─── LOAD SHEET ─── */
+function toCsvUrl(raw) {
+  let u = raw.trim();
+  if (/output=csv|format=csv/i.test(u)) return u; // ya es un link CSV directo
+  if (u.includes('/pubhtml')) return u.replace('/pubhtml', '/pub') + (u.includes('?') ? '&' : '?') + 'output=csv';
+  if (u.includes('/pub')) return u + (u.includes('?') ? '&' : '?') + 'output=csv';
+  // Link normal de edición (/edit) → usar el endpoint de exportación CSV directa
+  const m = u.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (m) {
+    const id = m[1];
+    const gidMatch = u.match(/[#&?]gid=(\d+)/);
+    const gid = gidMatch ? gidMatch[1] : '0';
+    return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+  }
+  return u;
+}
+
 async function loadSheet() {
   const raw = document.getElementById('sheetUrl').value.trim();
   if (!raw) { showErr('Pegá la URL de la planilla primero.'); return; }
 
-  let csvUrl = raw;
-  if (csvUrl.includes('/pubhtml')) csvUrl = csvUrl.replace('/pubhtml', '/pub');
-  if (!csvUrl.includes('output=csv')) csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'output=csv';
+  const csvUrl = toCsvUrl(raw);
 
   // Save URL for next load
   localStorage.setItem(SHEET_URL_KEY, csvUrl);
@@ -513,6 +586,86 @@ function isValidCSV(t) {
   if (!t || t.length < 10) return false;
   const s = t.trim();
   return !s.startsWith('<!') && !s.startsWith('<html') && s.split('\n').length >= 2;
+}
+
+/* ─── PLANILLA DE PICKING (RESERVAS) — fuente distinta, se cruza por Fecha + Cliente ─── */
+async function loadPickingSheet() {
+  const input = document.getElementById('pickingUrl');
+  const raw = (input ? input.value.trim() : '') || localStorage.getItem(PICKING_URL_KEY) || PICKING_DEFAULT_URL;
+  if (!raw) return;
+  const csvUrl = toCsvUrl(raw);
+  localStorage.setItem(PICKING_URL_KEY, raw);
+
+  const statusEl = document.getElementById('pickingLoadStatus');
+  if (statusEl) statusEl.textContent = '⏳ Cargando planilla de picking...';
+
+  const attempts = [
+    () => fetchDirect(csvUrl),
+    ...PROXIES.map(p => () => fetchVia(p(csvUrl))),
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const text = await attempt();
+      if (isValidCSV(text)) {
+        pickingRows = parsePickingCSV(text);
+        buildPickingIndex();
+        if (statusEl) statusEl.textContent = `✅ Picking cargado: ${pickingRows.length} reservas.`;
+        if (selectedDate) renderRoutes(selectedDate); // refrescar botones de picking si las rutas ya estaban pintadas
+        return;
+      }
+    } catch(e) { /* probar siguiente vía */ }
+  }
+  if (statusEl) statusEl.textContent = '⚠ No se pudo cargar la planilla de picking. Verificá que esté compartida como "Cualquiera con el enlace puede ver".';
+}
+
+function savePickingUrl() {
+  const raw = document.getElementById('pickingUrl').value.trim();
+  if (!raw) return;
+  localStorage.setItem(PICKING_URL_KEY, raw);
+  loadPickingSheet();
+}
+
+function parsePickingCSV(raw) {
+  const lines = raw.trim().split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return [];
+  const headers = splitLine(lines[0]);
+  return lines.slice(1).map(l => {
+    const vals = splitLine(l);
+    const obj = {};
+    headers.forEach((h,i) => { obj[h.trim()] = (vals[i]||'').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+function buildPickingIndex() {
+  pickingIndex = {};
+  if (!pickingRows.length) return;
+  const keys = Object.keys(pickingRows[0]);
+  const col = makeColFinder(keys);
+  const PC = {
+    date:    col('Fecha', 'fecha', 'date'),
+    client:  col('Nombre y Apellido Cliente', 'cliente', 'client', 'nombre'),
+    picking: col('Picking', 'picking', 'packing', 'lista de picking'),
+  };
+  if (!PC.picking) return;
+  pickingRows.forEach(r => {
+    const key = pickingKey(r[PC.date], r[PC.client]);
+    if (key) pickingIndex[key] = r[PC.picking] || '';
+  });
+}
+
+function normalizeText(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+function pickingKey(date, client) {
+  const c = normalizeText(client);
+  if (!c) return '';
+  const d = date ? normD(date) : '';
+  return `${d}|${c}`;
+}
+function getPickingFor(date, client) {
+  return pickingIndex[pickingKey(date, client)] || '';
 }
 
 /* ─── PARSE ─── */
@@ -680,6 +833,7 @@ function renderRoutes(date) {
       const hasTorneo=torneo&&!/^no$/i.test(torneo.trim())&&torneo.trim()!=='';
 
       const extrasList = parseExtrasList(extrasRaw);
+      const pickingText = r[C.picking] || getPickingFor(date, r[C.client]) || '';
 
       // ── CHECK-IN: id estable para esta parada (fecha + equipo + cliente + hora instalación) ──
       const cid = checkinId(date, team, r, C);
@@ -746,6 +900,7 @@ function renderRoutes(date) {
         <button class="bmap" onclick="openNav('maps','${addrQ}','${mapsFallUrl}')">🗺 Google Maps</button>
         <button class="bmap bwaze" onclick="openNav('waze','${addrQ}','${wazeFallUrl}')">🔵 Waze</button>
         ${phf?`<a class="bcall" href="tel:+569${ph}">📞 Llamar</a>`:''}
+        ${pickingText?`<button class="bmap bpicking" data-picking="${esc(pickingText)}" data-client="${esc(r[C.client]||'')}" onclick="openPickingFromBtn(this)">📦 Picking</button>`:''}
       </div></div></div>`;
     });
     html+=`</div>`; // cierre .tl
@@ -917,6 +1072,8 @@ function renderFocusCard(ti) {
   </div>`;
 
   if (phf) html += `<a class="focus-call" href="tel:+569${ph}">📞 Llamar al cliente (${phf})</a>`;
+  const pickingText = r[C.picking] || getPickingFor(selectedDate, r[C.client]) || '';
+  if (pickingText) html += `<button class="bmap bpicking" style="width:100%;height:44px;font-size:14px;margin-bottom:16px" data-picking="${esc(pickingText)}" data-client="${esc(r[C.client]||'')}" onclick="openPickingFromBtn(this)">📦 Ver picking</button>`;
 
   if (FIREBASE_READY && cid) {
     html += `<div class="focus-ck-btns">
@@ -1362,11 +1519,15 @@ async function photonSearch(q) {
 }
 
 /* ─── COLUMN DETECTION ─── */
-function detectCols(keys) {
+function makeColFinder(keys) {
   // Try exact match first, then fuzzy
   const exact = (name) => keys.find(k => k.trim().toLowerCase() === name.toLowerCase()) || '';
   const fuzzy = (...terms) => keys.find(k => terms.some(t => new RegExp(t,'i').test(k.trim()))) || '';
-  const col = (exactName, ...fallback) => exact(exactName) || fuzzy(...fallback);
+  return (exactName, ...fallback) => exact(exactName) || fuzzy(...fallback);
+}
+
+function detectCols(keys) {
+  const col = makeColFinder(keys);
 
   return {
     team:       col('Equipo',                     'equipo','team'),
@@ -1388,6 +1549,7 @@ function detectCols(keys) {
     linkRuta:   col('Link ruta',                   'link ruta','link','ruta url'),
     extras:     col('Extras',                      'extras','extra','adicional'),
     tiempoAdicional: col('Total tiempo Adicional', 'total tiempo adicional', 'tiempo adicional'),
+    picking:    col('Picking',                    'picking','packing','lista de picking'),
   };
 }
 
@@ -1547,12 +1709,14 @@ window.onload = () => {
   // Restore saved URL or use default
   const saved = localStorage.getItem(SHEET_URL_KEY) || DEFAULT_URL;
   document.getElementById('sheetUrl').value = saved;
+  document.getElementById('pickingUrl').value = localStorage.getItem(PICKING_URL_KEY) || PICKING_DEFAULT_URL;
 
   // Init admin mode
   initAdmin();
 
-  // Auto-load sheet
+  // Auto-load ambas planillas (rutas + picking) en paralelo
   loadSheet();
+  loadPickingSheet();
 };
 </script>
 </body>
