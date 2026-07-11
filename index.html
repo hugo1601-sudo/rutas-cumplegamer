@@ -123,6 +123,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .map-leg-item:hover{border-color:var(--blue);}
 .map-leg-num{width:21px;height:21px;border-radius:50%;background:var(--blue);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .map-leg-num.last{background:var(--teal);}
+.map-leg-num.warn{background:var(--amber);}
+.map-leg-item.warn{border-color:var(--amber-m);background:var(--amber-l);flex-wrap:wrap;cursor:default;}
+.map-pick-btn{width:100%;height:30px;border-radius:7px;border:1px solid var(--amber-m);background:var(--surface);color:var(--amber);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;margin-top:2px;}
+.map-pick-btn:hover{background:var(--amber-l);}
 .map-leg-main{flex:1;min-width:0;}
 .map-leg-title{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .map-leg-sub{font-size:11px;color:var(--muted);}
@@ -656,11 +660,13 @@ async function renderTeamMap(ti) {
     }).addTo(map);
     map._markersLayer = L.layerGroup().addTo(map);
     map._routeLayer = null;
+    map._pickHandler = null;
     mapInstances[ti] = map;
   } else {
     setTimeout(() => mapInstances[ti].invalidateSize(), 60);
   }
   const map = mapInstances[ti];
+  cancelManualPick(ti); // si había un pick manual pendiente de otro render, cancelarlo
   map._markersLayer.clearLayers();
   if (map._routeLayer) { map.removeLayer(map._routeLayer); map._routeLayer = null; }
   legendEl.innerHTML = '';
@@ -670,65 +676,89 @@ async function renderTeamMap(ti) {
   map._renderToken = token;
 
   const points = [];
+  const failed = [];
   for (let i = 0; i < trows.length; i++) {
     const r = trows[i];
     if (!r[C.address]) continue;
     statusEl.textContent = `📍 Ubicando direcciones... (${i+1}/${trows.length})`;
-    const addr = `${r[C.address]}, ${r[C.comuna]||''}, Chile`;
-    const coords = await geocodeAddress(addr);
+    const cacheKey = buildCacheKey(r[C.address], r[C.comuna]);
+    const coords = await geocodeAddress(r[C.address], r[C.comuna]);
     if (map._renderToken !== token) return; // el usuario cambió de vista/equipo mientras geocodificaba
-    if (coords) points.push({ row: r, idx: i, ...coords });
+    if (coords) points.push({ row: r, idx: i, cacheKey, ...coords });
+    else failed.push({ row: r, idx: i, cacheKey });
   }
 
-  if (!points.length) {
-    statusEl.textContent = '⚠ No se pudieron ubicar las direcciones de este equipo en el mapa.';
+  statusEl.textContent = failed.length
+    ? `⚠ ${failed.length} de ${trows.length} direcciones no se pudieron ubicar automáticamente. Tocá "Ubicar en el mapa" en la lista para marcarlas a mano.`
+    : '';
+
+  if (!points.length && !failed.length) {
     setTimeout(() => map.invalidateSize(), 60);
     return;
   }
-  statusEl.textContent = '';
 
-  points.forEach((p, i) => {
-    const isLast = i === points.length - 1;
-    const r = p.row;
+  // Construir marcadores y lista lateral en el orden real de visita (trows), mezclando encontradas y pendientes
+  const combined = [...points, ...failed].sort((a,b) => a.idx - b.idx);
+  combined.forEach(item => {
+    const isLast = item.idx === trows.length - 1;
+    const r = item.row;
     const montajeBase = parseInt(r[C.montaje]) || 0;
     const montajeTotal = montajeBase + tiempoAdicionalGlobal;
+    const found = typeof item.lat === 'number';
 
-    const icon = L.divIcon({
-      className: '',
-      html: `<div class="map-pin-num${isLast?' last':''}">${p.idx+1}</div>`,
-      iconSize: [26,26], iconAnchor: [13,13], popupAnchor: [0,-13]
-    });
+    if (found) {
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="map-pin-num${isLast?' last':''}">${item.idx+1}</div>`,
+        iconSize: [26,26], iconAnchor: [13,13], popupAnchor: [0,-13]
+      });
+      const popupHtml = `
+        <div style="font-family:'DM Sans',sans-serif;min-width:190px">
+          <div style="font-weight:600;font-size:13px;margin-bottom:2px">${esc(r[C.client]||'Cliente')}</div>
+          <div style="font-size:11px;color:#888;margin-bottom:6px">${esc(r[C.address]||'')}${r[C.comuna]?', '+esc(r[C.comuna]):''}</div>
+          ${r[C.instStart]?`<div style="font-size:12px;margin-bottom:2px">🛠 Instalación: <b>${r[C.instStart]}${r[C.instEnd]?' → '+r[C.instEnd]:''}</b>${montajeTotal?' ('+montajeTotal+' min)':''}</div>`:''}
+          ${r[C.eventStart]?`<div style="font-size:12px">🎮 Evento: <b>${r[C.eventStart]}${r[C.eventEnd]?' → '+r[C.eventEnd]:''}</b></div>`:''}
+        </div>`;
+      L.marker([item.lat, item.lon], { icon }).bindPopup(popupHtml).addTo(map._markersLayer);
 
-    const popupHtml = `
-      <div style="font-family:'DM Sans',sans-serif;min-width:190px">
-        <div style="font-weight:600;font-size:13px;margin-bottom:2px">${esc(r[C.client]||'Cliente')}</div>
-        <div style="font-size:11px;color:#888;margin-bottom:6px">${esc(r[C.address]||'')}${r[C.comuna]?', '+esc(r[C.comuna]):''}</div>
-        ${r[C.instStart]?`<div style="font-size:12px;margin-bottom:2px">🛠 Instalación: <b>${r[C.instStart]}${r[C.instEnd]?' → '+r[C.instEnd]:''}</b>${montajeTotal?' ('+montajeTotal+' min)':''}</div>`:''}
-        ${r[C.eventStart]?`<div style="font-size:12px">🎮 Evento: <b>${r[C.eventStart]}${r[C.eventEnd]?' → '+r[C.eventEnd]:''}</b></div>`:''}
-      </div>`;
-
-    L.marker([p.lat, p.lon], { icon }).bindPopup(popupHtml).addTo(map._markersLayer);
-
-    const legItem = document.createElement('div');
-    legItem.className = 'map-leg-item';
-    legItem.innerHTML = `
-      <div class="map-leg-num${isLast?' last':''}">${p.idx+1}</div>
-      <div class="map-leg-main">
-        <div class="map-leg-title">${esc(r[C.client]||'Cliente')}</div>
-        <div class="map-leg-sub">${esc(r[C.comuna]||'')}${montajeTotal?' · Montaje '+montajeTotal+' min':''}</div>
-      </div>
-      <div class="map-leg-time">${r[C.instStart]||''}${r[C.instEnd]?'–'+r[C.instEnd]:''}</div>`;
-    legItem.onclick = () => {
-      map.setView([p.lat, p.lon], 15);
-      L.popup().setLatLng([p.lat, p.lon]).setContent(popupHtml).openOn(map);
-    };
-    legendEl.appendChild(legItem);
+      const legItem = document.createElement('div');
+      legItem.className = 'map-leg-item';
+      legItem.innerHTML = `
+        <div class="map-leg-num${isLast?' last':''}">${item.idx+1}</div>
+        <div class="map-leg-main">
+          <div class="map-leg-title">${esc(r[C.client]||'Cliente')}</div>
+          <div class="map-leg-sub">${esc(r[C.comuna]||'')}${montajeTotal?' · Montaje '+montajeTotal+' min':''}</div>
+        </div>
+        <div class="map-leg-time">${r[C.instStart]||''}${r[C.instEnd]?'–'+r[C.instEnd]:''}</div>`;
+      legItem.onclick = () => {
+        map.setView([item.lat, item.lon], 15);
+        L.popup().setLatLng([item.lat, item.lon]).setContent(popupHtml).openOn(map);
+      };
+      legendEl.appendChild(legItem);
+    } else {
+      const legItem = document.createElement('div');
+      legItem.className = 'map-leg-item warn';
+      legItem.innerHTML = `
+        <div class="map-leg-num warn">${item.idx+1}</div>
+        <div class="map-leg-main">
+          <div class="map-leg-title">${esc(r[C.client]||'Cliente')}</div>
+          <div class="map-leg-sub">⚠ No ubicada: ${esc(r[C.address]||'')}${r[C.comuna]?', '+esc(r[C.comuna]):''}</div>
+        </div>`;
+      const pickBtn = document.createElement('button');
+      pickBtn.className = 'map-pick-btn';
+      pickBtn.textContent = '📍 Ubicar en el mapa';
+      pickBtn.onclick = (e) => { e.stopPropagation(); startManualPick(ti, item.cacheKey, r[C.client]||r[C.address]||'esta dirección'); };
+      legItem.appendChild(pickBtn);
+      legendEl.appendChild(legItem);
+    }
   });
 
-  map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lon])), { padding: [30,30] });
+  if (points.length) {
+    map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lon])), { padding: [30,30] });
+  }
   setTimeout(() => map.invalidateSize(), 60);
 
-  // Trazar la ruta entre paradas (respetando el orden de instalación)
+  // Trazar la ruta entre paradas ubicadas (respetando el orden de instalación)
   if (points.length > 1) {
     try {
       const coordStr = points.map(p => `${p.lon},${p.lat}`).join(';');
@@ -750,27 +780,102 @@ async function renderTeamMap(ti) {
   }
 }
 
-/* ─── GEOCODIFICACIÓN (Nominatim/OpenStreetMap, con caché local) ─── */
-async function geocodeAddress(address) {
-  const key = address.toLowerCase().trim();
-  if (geocodeCache[key]) return geocodeCache[key];
+/* ─── UBICACIÓN MANUAL (respaldo cuando el geocodificador no encuentra la dirección) ─── */
+function startManualPick(ti, cacheKey, label) {
+  const map = mapInstances[ti];
+  if (!map) return;
+  cancelManualPick(ti);
+  const statusEl = document.getElementById(`mapstatus${ti}`);
+  if (statusEl) statusEl.textContent = `📍 Tocá el mapa en la ubicación correcta de "${label}"...`;
+  map.getContainer().style.cursor = 'crosshair';
+  const handler = (e) => {
+    geocodeCache[cacheKey] = { lat: e.latlng.lat, lon: e.latlng.lng };
+    persistGeocodeCache();
+    cancelManualPick(ti);
+    renderTeamMap(ti);
+  };
+  map._pickHandler = handler;
+  map.on('click', handler);
+}
 
+function cancelManualPick(ti) {
+  const map = mapInstances[ti];
+  if (!map || !map._pickHandler) return;
+  map.off('click', map._pickHandler);
+  map._pickHandler = null;
+  map.getContainer().style.cursor = '';
+}
+
+/* ─── GEOCODIFICACIÓN (Nominatim + Photon, con variantes de dirección y caché local) ─── */
+const ADDR_NOISE_RE = /\b(depto|dpto|departamento|of\.?|oficina|torre|piso|block|blq|casa|villa|parcela|sitio)\.?\s*[\wÀ-ÿ]*\.?/gi;
+
+function cleanAddressNoise(addr) {
+  return addr.replace(ADDR_NOISE_RE, '').replace(/,\s*,/g, ',').replace(/\s{2,}/g, ' ').replace(/,\s*$/, '').trim();
+}
+
+function buildAddressVariants(address, comuna) {
+  const c = (comuna || '').trim();
+  const clean = cleanAddressNoise(address);
+  const variants = [];
+  const push = (v) => { const t = v.replace(/\s{2,}/g, ' ').trim(); if (t && !variants.includes(t)) variants.push(t); };
+  push(`${address}, ${c}, Chile`);
+  if (clean !== address) push(`${clean}, ${c}, Chile`);
+  push(`${clean}, ${c}, Región Metropolitana, Chile`);
+  push(`${clean}, Chile`);
+  // último recurso: la calle sin número, por si el número exacto no está indexado
+  const streetOnly = clean.replace(/\s*\d+\s*(,|$)/, '$1').trim();
+  if (streetOnly && streetOnly !== clean) push(`${streetOnly}, ${c}, Chile`);
+  return variants;
+}
+
+function buildCacheKey(address, comuna) {
+  return `${address}, ${comuna || ''}, chile`.toLowerCase().trim();
+}
+function persistGeocodeCache() {
+  try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(geocodeCache)); } catch(e) {}
+}
+
+async function geocodeAddress(rawAddress, comuna) {
+  const cacheKey = buildCacheKey(rawAddress, comuna);
+  if (geocodeCache[cacheKey]) return geocodeCache[cacheKey];
+
+  const variants = buildAddressVariants(rawAddress, comuna);
+
+  // 1) Nominatim, probando cada variante de la dirección
+  for (const q of variants) {
+    const coords = await nominatimSearch(q);
+    if (coords) { geocodeCache[cacheKey] = coords; persistGeocodeCache(); return coords; }
+  }
+  // 2) Photon como segundo motor de geocodificación (a veces indexa mejor direcciones locales)
+  for (const q of variants) {
+    const coords = await photonSearch(q);
+    if (coords) { geocodeCache[cacheKey] = coords; persistGeocodeCache(); return coords; }
+  }
+  return null;
+}
+
+async function nominatimSearch(q) {
   // Nominatim exige máx. 1 solicitud por segundo
   const wait = Math.max(0, 1100 - (Date.now() - lastGeocodeTime));
   if (wait > 0) await new Promise(r => setTimeout(r, wait));
   lastGeocodeTime = Date.now();
-
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=cl&q=${encodeURIComponent(address)}`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=cl&q=${encodeURIComponent(q)}`;
     const res = await fetch(url);
     const data = await res.json();
-    if (data && data[0]) {
-      const coords = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-      geocodeCache[key] = coords;
-      try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(geocodeCache)); } catch(e) {}
-      return coords;
-    }
-  } catch(e) { /* se ignora, se muestra la advertencia general al usuario */ }
+    if (data && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  } catch(e) { /* se prueba la siguiente variante/proveedor */ }
+  return null;
+}
+
+async function photonSearch(q) {
+  try {
+    const url = `https://photon.komoot.io/api/?limit=1&lat=-33.45&lon=-70.66&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const f = data && data.features && data.features[0];
+    if (f) return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] };
+  } catch(e) { /* se prueba la siguiente variante */ }
   return null;
 }
 
