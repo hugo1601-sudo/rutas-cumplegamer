@@ -145,6 +145,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .ckbtn:disabled{opacity:.4;cursor:not-allowed;}
 .ckbtn.done{background:var(--teal-l);border-color:var(--teal-m);color:var(--teal);}
 
+/* ── VISTA "PARADA ACTUAL" ── */
+.focus-wrap{display:none;}
+.focus-wrap.on{display:block;}
+.focus-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.75rem 1.5rem;text-align:center;}
+.focus-progress{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;}
+.focus-name{font-size:26px;font-weight:700;line-height:1.2;margin-bottom:4px;}
+.focus-child{font-size:15px;color:var(--muted);margin-bottom:14px;}
+.focus-addr{font-size:16px;color:var(--text);margin-bottom:18px;}
+.focus-times{display:flex;justify-content:center;gap:26px;margin-bottom:14px;flex-wrap:wrap;}
+.focus-time-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
+.focus-time-v{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;}
+.focus-nav-btns{display:flex;flex-direction:column;gap:10px;margin:18px 0 14px;}
+.focus-nav-btn{height:62px;border-radius:14px;font-size:17px;font-weight:700;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.focus-nav-btn.maps{background:var(--blue);color:#fff;}
+.focus-nav-btn.maps:hover{background:#0C447C;}
+.focus-nav-btn.waze{background:#00B4D8;color:#fff;}
+.focus-nav-btn.waze:hover{background:#009BC2;}
+.focus-call{display:block;margin-bottom:16px;font-size:15px;font-weight:500;color:var(--teal);text-decoration:none;}
+.focus-call:hover{text-decoration:underline;}
+.focus-ck-btns{display:flex;flex-direction:column;gap:10px;margin-bottom:6px;}
+.focus-ck-btn{height:56px;border-radius:14px;font-size:16px;font-weight:700;border:2px solid var(--border);background:var(--bg);cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif;}
+.focus-ck-btn.done{background:var(--teal-l);border-color:var(--teal);color:var(--teal);}
+.focus-ck-btn:disabled{opacity:.4;cursor:not-allowed;}
+.focus-pager{display:flex;justify-content:space-between;align-items:center;margin-top:16px;}
+.focus-pbtn{width:46px;height:46px;border-radius:50%;border:1px solid var(--border);background:var(--surface);font-size:18px;cursor:pointer;color:var(--text);}
+.focus-pbtn:hover:not(:disabled){border-color:var(--blue);color:var(--blue);}
+.focus-pbtn:disabled{opacity:.3;cursor:not-allowed;}
+.focus-done-msg{padding:2.5rem 1rem;text-align:center;color:var(--muted);font-size:14px;}
+
 /* ── TIMELINE ── */
 .tl{position:relative;padding-left:34px;}
 .tl::before{content:'';position:absolute;left:11px;top:4px;bottom:4px;width:1.5px;background:var(--g100);}
@@ -205,9 +234,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .admin-trigger{position:fixed;bottom:0;left:0;width:48px;height:48px;cursor:pointer;z-index:50;opacity:0;}
 
 @media print{
-  .topbar,.admin-panel,.date-sec,.ttabs,.pdf-bar,.brow,.admin-trigger{display:none!important;}
+  .topbar,.admin-panel,.date-sec,.ttabs,.pdf-bar,.brow,.admin-trigger,.view-toggle,.map-wrap,.focus-wrap,.ckbar,.ck-summary{display:none!important;}
   .main{max-width:100%;padding:0;}
   .panel{display:block!important;}
+  .list-view{display:block!important;}
   .sc{break-inside:avoid;}
 }
 </style>
@@ -328,6 +358,8 @@ let checkinsUnsub = null;   // función para cancelar el listener de check-ins a
 let checkinState = {};      // { [cid]: {llegada, instalada, ...} } — último estado conocido desde Firestore
 let cidMeta = {};           // { [cid]: {date, team, client, instStart} } — datos para escribir el check-in
 let teamCids = {};          // { [ti]: [cid, cid, ...] } — paradas de cada equipo, para el resumen
+let focusIndex = {};        // { [ti]: idx } — parada que se muestra en "Parada actual" por equipo
+let focusActive = {};       // { [ti]: bool } — si la vista "Parada actual" está abierta para ese equipo
 
 /* ─── ADMIN ACCESS ─── */
 function initAdmin() {
@@ -524,6 +556,8 @@ function renderRoutes(date) {
   cidMeta = {};
   teamCids = {};
   checkinState = {};
+  focusIndex = {};
+  focusActive = {};
   if (!rows.length) {
     document.getElementById('routeContent').innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>No hay eventos para esta fecha.</p></div>`;
     return;
@@ -557,6 +591,7 @@ function renderRoutes(date) {
     html+=`<div class="view-toggle">
       <div class="vtab active" id="vtab-list-${ti}" onclick="switchView(${ti},'list')">☰ Lista</div>
       <div class="vtab" id="vtab-map-${ti}" onclick="switchView(${ti},'map')">🗺 Mapa</div>
+      <div class="vtab" id="vtab-focus-${ti}" onclick="switchView(${ti},'focus')">▶ Parada actual</div>
     </div>`;
     html+=`<div class="sbar">
       <div class="met"><div class="met-l">Instalaciones</div><div class="met-v">${trows.length}</div><div class="met-s">paradas hoy</div></div>
@@ -573,6 +608,8 @@ function renderRoutes(date) {
       <div class="map-status" id="mapstatus${ti}"></div>
       <div class="map-legend" id="maplegend${ti}"></div>
     </div>`;
+
+    html+=`<div class="focus-wrap" id="focuswrap${ti}"></div>`;
 
     html+=`<div class="list-view on" id="list${ti}">`;
     html+=`<div class="tl">`;
@@ -709,6 +746,7 @@ function subscribeCheckins(date) {
     snap.forEach(doc => { checkinState[doc.id] = doc.data(); });
     Object.keys(cidMeta).forEach(cid => applyCheckinState(cid, checkinState[cid] || {}));
     updateAllSummaries();
+    updateFocusViews();
   }, err => {
     console.warn('No se pudo escuchar los check-ins:', err);
     Object.keys(teamCids).forEach(ti => {
@@ -777,13 +815,125 @@ function fmtTime(iso) {
   catch(e) { return ''; }
 }
 
+/* ─── VISTA "PARADA ACTUAL" ─── */
+function computeCurrentStopIndex(ti) {
+  const data = teamDataCache[ti];
+  if (!data || !data.trows.length) return 0;
+  if (!FIREBASE_READY) return 0; // sin check-in no hay forma de saber cuál es la actual: mostrar la primera
+  const cids = teamCids[ti] || [];
+  for (let i = 0; i < cids.length; i++) {
+    const d = checkinState[cids[i]];
+    if (!d || !d.instalada) return i; // primera parada sin instalación lista todavía
+  }
+  return data.trows.length - 1; // todas completas: quedarse en la última
+}
+
+function renderFocusCard(ti) {
+  const data = teamDataCache[ti];
+  const wrap = document.getElementById(`focuswrap${ti}`);
+  if (!data || !wrap) return;
+  const { trows, C } = data;
+  if (!trows.length) { wrap.innerHTML = `<div class="focus-done-msg">Sin paradas para este equipo.</div>`; return; }
+
+  let idx = focusIndex[ti];
+  if (idx === undefined || idx === null) idx = computeCurrentStopIndex(ti);
+  idx = Math.max(0, Math.min(idx, trows.length - 1));
+  focusIndex[ti] = idx;
+
+  const r = trows[idx];
+  const cid = (teamCids[ti] || [])[idx];
+  const d = (cid && checkinState[cid]) || {};
+  const llegadaAt = d.llegada && d.llegada.at;
+  const instaladaAt = d.instalada && d.instalada.at;
+  const allDone = FIREBASE_READY && trows.length > 0 && (teamCids[ti]||[]).every(c => checkinState[c] && checkinState[c].instalada);
+
+  const addrQ = encodeURIComponent((r[C.address]||'') + ' ' + (r[C.comuna]||'') + ' Chile');
+  const mapsFallUrl = (r[C.linkRuta] && r[C.linkRuta].startsWith('http')) ? r[C.linkRuta] : ('https://maps.google.com/maps?q=' + addrQ);
+  const wazeFallUrl = 'https://waze.com/ul?q=' + addrQ + '&navigate=yes';
+  const rawph = (r[C.phone]||'').replace(/\D/g,'');
+  const ph = rawph.startsWith('56') ? rawph.slice(2) : rawph;
+  const phf = ph ? fmtPh(ph) : '';
+  const montajeBase = parseInt(r[C.montaje]) || 0;
+  const montajeTotal = montajeBase + tiempoAdicionalGlobal;
+
+  let html = `<div class="focus-card">`;
+  html += `<div class="focus-progress">Parada ${idx+1} de ${trows.length}${allDone?' · ✅ Todas completas':''}</div>`;
+  html += `<div class="focus-name">${esc(r[C.client]||'Cliente')}</div>`;
+  if (r[C.child]) html += `<div class="focus-child">🎂 ${esc(r[C.child])}</div>`;
+  html += `<div class="focus-addr">📍 ${esc(r[C.address]||'')}${r[C.comuna]?', '+esc(r[C.comuna]):''}</div>`;
+
+  html += `<div class="focus-times">`;
+  if (r[C.instStart]) html += `<div class="focus-time-item"><div class="focus-time-l">Instalación</div><div class="focus-time-v">${r[C.instStart]}${r[C.instEnd]?'–'+r[C.instEnd]:''}</div></div>`;
+  if (r[C.eventStart]) html += `<div class="focus-time-item"><div class="focus-time-l">Evento</div><div class="focus-time-v">${r[C.eventStart]}${r[C.eventEnd]?'–'+r[C.eventEnd]:''}</div></div>`;
+  html += `</div>`;
+  if (montajeTotal) html += `<div style="font-size:13px;color:var(--muted);margin-bottom:16px;">🛠 Montaje: ${montajeTotal} min</div>`;
+
+  html += `<div class="focus-nav-btns">
+    <button class="focus-nav-btn maps" onclick="openNav('maps','${addrQ}','${mapsFallUrl}')">🗺 Ir con Google Maps</button>
+    <button class="focus-nav-btn waze" onclick="openNav('waze','${addrQ}','${wazeFallUrl}')">🔵 Ir con Waze</button>
+  </div>`;
+
+  if (phf) html += `<a class="focus-call" href="tel:+569${ph}">📞 Llamar al cliente (${phf})</a>`;
+
+  if (FIREBASE_READY && cid) {
+    html += `<div class="focus-ck-btns">
+      <button class="focus-ck-btn${llegadaAt?' done':''}" onclick="toggleCheckin('${cid}','llegada')">${llegadaAt?'✅ Llegó · '+fmtTime(llegadaAt):'○ Marcar llegada'}</button>
+      <button class="focus-ck-btn${instaladaAt?' done':''}" ${!llegadaAt?'disabled':''} onclick="toggleCheckin('${cid}','instalada')">${instaladaAt?'✅ Instalado · '+fmtTime(instaladaAt):'🛠 Marcar instalación lista'}</button>
+    </div>`;
+  }
+
+  html += `<div class="focus-pager">
+    <button class="focus-pbtn" onclick="focusNav(${ti},-1)" ${idx===0?'disabled':''}>←</button>
+    <button class="focus-pbtn" onclick="focusNav(${ti},1)" ${idx===trows.length-1?'disabled':''}>→</button>
+  </div>`;
+  html += `</div>`;
+
+  wrap.innerHTML = html;
+}
+
+function focusNav(ti, delta) {
+  const data = teamDataCache[ti];
+  if (!data) return;
+  const max = data.trows.length - 1;
+  focusIndex[ti] = Math.max(0, Math.min((focusIndex[ti]||0) + delta, max));
+  renderFocusCard(ti);
+}
+
+// Se llama cada vez que llega una actualización de check-ins: refresca la vista abierta
+// y avanza automáticamente a la próxima parada pendiente cuando la actual queda lista.
+function updateFocusViews() {
+  Object.keys(focusActive).forEach(ti => {
+    if (!focusActive[ti] || !teamDataCache[ti]) return;
+    const idx = focusIndex[ti] ?? 0;
+    const cid = (teamCids[ti] || [])[idx];
+    const d = cid && checkinState[cid];
+    renderFocusCard(ti);
+    if (d && d.instalada) {
+      const nextIdx = computeCurrentStopIndex(ti);
+      if (nextIdx !== idx) {
+        setTimeout(() => {
+          // solo avanzar si el usuario no navegó manualmente mientras tanto
+          if (focusActive[ti] && focusIndex[ti] === idx) {
+            focusIndex[ti] = nextIdx;
+            renderFocusCard(ti);
+          }
+        }, 900);
+      }
+    }
+  });
+}
+
 /* ─── VISTA LISTA / MAPA ─── */
 function switchView(ti, type) {
   document.getElementById(`vtab-list-${ti}`)?.classList.toggle('active', type==='list');
   document.getElementById(`vtab-map-${ti}`)?.classList.toggle('active', type==='map');
+  document.getElementById(`vtab-focus-${ti}`)?.classList.toggle('active', type==='focus');
   document.getElementById(`list${ti}`)?.classList.toggle('on', type==='list');
   document.getElementById(`mapwrap${ti}`)?.classList.toggle('on', type==='map');
+  document.getElementById(`focuswrap${ti}`)?.classList.toggle('on', type==='focus');
+  focusActive[ti] = (type === 'focus');
   if (type === 'map') renderTeamMap(ti);
+  if (type === 'focus') { focusIndex[ti] = computeCurrentStopIndex(ti); renderFocusCard(ti); }
 }
 
 async function renderTeamMap(ti) {
@@ -1058,7 +1208,7 @@ function doPDF(ti, team, date) {
   const panel = document.getElementById(`p${ti}`);
   if (!panel) return;
   const clone = panel.cloneNode(true);
-  clone.querySelectorAll('.pdf-bar,.brow,.view-toggle,.map-wrap,.ckbar,.ck-summary').forEach(e => e.remove());
+  clone.querySelectorAll('.pdf-bar,.brow,.view-toggle,.map-wrap,.ckbar,.ck-summary,.focus-wrap').forEach(e => e.remove());
   clone.querySelectorAll('.list-view').forEach(e => e.classList.add('on')); // el PDF siempre imprime la lista, no el mapa
   const w = window.open('', '_blank');
   w.document.write(printDoc(clone.innerHTML, team, date));
